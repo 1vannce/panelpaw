@@ -79,6 +79,8 @@ Only the endpoint preference is persisted on the device. Entries and lists come 
 
 ## Project structure
 
+For a folder-by-folder explanation of how the app is organized, see [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md).
+
 ```text
 panelpaw/
 |-- app/
