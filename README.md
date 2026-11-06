@@ -2,6 +2,8 @@
 
 A Manga and Manhwa reading tracker built with React Native, Expo SDK 58, JavaScript, Expo Router, and TanStack Query. Search the public Kitsu catalog, open a title, save it to your library, track chapter progress and reading status, and organize titles into custom lists.
 
+> **Project architecture:** [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) explains every folder in plain language, with comments, a request walkthrough, and a "where to find things" table.
+
 All saved entries and lists are read and written through an external REST API using Fetch. There is no local backend to run. Configure an account-owned MockAPI project with `entries` and `lists` resources for persistent tracker storage. The old public Beeceptor demo is being retired ahead of its expected November 10, 2026 expiry. [API setup and migration checklist](docs/API_SETUP.md).
 
 ## Run the delivered project
