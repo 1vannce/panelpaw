@@ -53,9 +53,11 @@ export default function LibraryScreen() {
   }
   async function increment(entry) {
     setError('');setNotice('');
+    // Reading a chapter of a planned title means it has been started.
+    const started = entry.status === 'planned';
     try {
-      await actions.updateEntry.mutateAsync({ entry, changes: { progress: entry.progress + 1, status: entry.status, listId: entry.listId } });
-      setNotice('One more chapter. Progress saved.');
+      await actions.updateEntry.mutateAsync({ entry, changes: { progress: entry.progress + 1, status: started ? 'reading' : entry.status, listId: entry.listId } });
+      setNotice(started ? 'One more chapter. Moved to Reading.' : 'One more chapter. Progress saved.');
     } catch (cause) {setError(getErrorMessage(cause));}
   }
   async function saveList() {
