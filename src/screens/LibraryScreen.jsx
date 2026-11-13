@@ -53,9 +53,11 @@ export default function LibraryScreen() {
   }
   async function increment(entry) {
     setError('');setNotice('');
+    // Reading a chapter of a planned title means it has been started.
+    const started = entry.status === 'planned';
     try {
-      await actions.updateEntry.mutateAsync({ entry, changes: { progress: entry.progress + 1, status: entry.status, listId: entry.listId } });
-      setNotice('One more chapter. Progress saved.');
+      await actions.updateEntry.mutateAsync({ entry, changes: { progress: entry.progress + 1, status: started ? 'reading' : entry.status, listId: entry.listId } });
+      setNotice(started ? 'One more chapter. Moved to Reading.' : 'One more chapter. Progress saved.');
     } catch (cause) {setError(getErrorMessage(cause));}
   }
   async function saveList() {
@@ -77,6 +79,10 @@ export default function LibraryScreen() {
       }
       setConfirmation(null);setNotice(confirmation.kind === 'entry' ? 'Title removed from your library.' : 'List removed. Its titles are still in your library.');setError('');
     } catch (cause) {setModalError(getErrorMessage(cause));}
+  }
+  function closeLists() {
+    if (busy) return;
+    setManageLists(false);setRenameId(null);setListName('');
   }
   const refresh = () => {void entries.refetch();void lists.refetch();};
   const header = <View style={styles.header}>
@@ -151,9 +157,9 @@ export default function LibraryScreen() {
         <Button label="Save progress" onPress={saveEntry} loading={busy} disabled={lists.isError || lists.isPending} />
       </ScrollView></SafeAreaView></KeyboardAvoidingView>
     </Modal>
-    <Modal visible={manageLists && !confirmation} transparent animationType="fade" onRequestClose={() => {if (!busy) setManageLists(false);}}>
+    <Modal visible={manageLists && !confirmation} transparent animationType="fade" onRequestClose={closeLists}>
       <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><SafeAreaView style={styles.modalCard}><ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
-        <SectionHeading title="Your reading lists" action="Done" onAction={() => {if (!busy) setManageLists(false);}} />
+        <SectionHeading title="Your reading lists" action="Done" onAction={closeLists} />
         <Text style={styles.body}>Create, rename, or remove a reading list.</Text>
         {lists.isError ? <Notice title="Lists could not load" message={getErrorMessage(lists.error)} tone="error" actionLabel="Retry lists" onAction={() => void lists.refetch()} /> : null}
         {allLists.map((list) => <View key={list.id} style={styles.listRow}><Ionicons name="folder-outline" size={20} color={colors.accent} /><Text style={[styles.title, { flex: 1 }]}>{list.name}</Text>
