@@ -8,11 +8,10 @@ import { Button, Chip, Cover, EmptyArt, IconButton, Notice, PageHeader, Progress
 import { fonts } from "../theme.js";
 import { useThemed } from "../providers/ThemeProvider.jsx";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
-import { useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
+import { incrementChapter, useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
 import { getErrorMessage } from "../api/http.js";
-import { nextChapter, READING_STATUSES, STATUS_LABELS } from "../types.js";
+import { READING_STATUSES, STATUS_LABELS } from "../types.js";
 import { SORTS, sortEntries } from "../library.js";
-import { stampThud, tick } from "../haptics.js";
 
 export default function LibraryScreen() {
   const { colors, styles } = useThemed(makeStyles);
@@ -51,19 +50,26 @@ export default function LibraryScreen() {
     if (!editing) return;
     setModalError('');
     if (!/^\d+$/.test(progress.trim())) {setModalError('Enter a whole chapter number, starting from 0.');return;}
+    // Keep status and progress in step, as the Title screen does.
+    const total = editing.totalChapters;
+    let chapter = Number(progress);
+    let nextStatus = editStatus;
+    if (total !== null) {
+      if (chapter > total) {setModalError('This title has ' + total + ' chapters. Choose a chapter within that range.');return;}
+      if (editStatus === 'completed') chapter = total;
+      else if (chapter === total) nextStatus = 'completed';
+    }
     try {
-      await actions.updateEntry.mutateAsync({ entry: editing, changes: { progress: Number(progress), status: editStatus, listId: editList } });
+      await actions.updateEntry.mutateAsync({ entry: editing, changes: { progress: chapter, status: nextStatus, listId: editList } });
       setEditing(null);setNotice('Reading progress saved.');setError('');
     } catch (cause) {setModalError(getErrorMessage(cause));}
   }
   async function increment(entry) {
     setError('');setNotice('');
-    const next = nextChapter(entry);
     try {
-      await actions.updateEntry.mutateAsync({ entry, changes: { ...next, listId: entry.listId } });
-      if (next.status === 'completed' && entry.status !== 'completed') stampThud();else tick();
-      setNotice(next.status === 'completed' && entry.status !== 'completed' ? 'Last chapter read. Marked Completed.' :
-      entry.status === 'planned' ? 'One more chapter. Moved to Reading.' : 'One more chapter. Progress saved.');
+      const { finished, started } = await incrementChapter(actions.updateEntry, entry);
+      setNotice(finished ? 'Last chapter read. Marked Completed.' :
+      started ? 'One more chapter. Moved to Reading.' : 'One more chapter. Progress saved.');
     } catch (cause) {setError(getErrorMessage(cause));}
   }
   async function saveList() {
@@ -158,7 +164,10 @@ export default function LibraryScreen() {
         <Text style={styles.title}>{editing?.title}</Text>
         <Text style={styles.label}>CHAPTERS READ</Text><TextInput accessibilityLabel="Chapters read" keyboardType="number-pad" value={progress} editable={!busy}
             onChangeText={setProgress} style={styles.input} />
-        <Text style={styles.label}>READING STATUS</Text><View style={styles.wrap}>{READING_STATUSES.map((value) => <Chip key={value} label={STATUS_LABELS[value]} selected={editStatus === value} onPress={() => setEditStatus(value)} />)}</View>
+        <Text style={styles.label}>READING STATUS</Text><View style={styles.wrap}>{READING_STATUSES.map((value) => <Chip key={value} label={STATUS_LABELS[value]} selected={editStatus === value} onPress={() => {
+          setEditStatus(value);
+          if (value === 'completed' && editing?.totalChapters != null) setProgress(String(editing.totalChapters));
+        }} />)}</View>
         <Text style={styles.label}>READING LIST</Text>
         {lists.isError ? <Notice title="Lists could not load" message={getErrorMessage(lists.error)} tone="error" actionLabel="Retry lists" onAction={() => void lists.refetch()} /> : null}<View style={styles.wrap}><Chip label="Unfiled" selected={!editList} onPress={() => setEditList(null)} />
           {allLists.map((list) => <Chip key={list.id} label={list.name} selected={editList === list.id} onPress={() => setEditList(list.id)} />)}</View>

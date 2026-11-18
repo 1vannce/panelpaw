@@ -6,12 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Button, Chip, Cover, EmptyArt, IconButton, Masthead, Notice, ProgressBar, ScreenEnter, SkeletonCover, Tag, ThemeToggle } from '../components/ui.jsx';
 import { useCatalog } from '../hooks/useCatalog.js';
-import { useEntries, useTrackerMutations } from '../hooks/useTracker.js';
+import { incrementChapter, useEntries, useTrackerMutations } from '../hooks/useTracker.js';
 import { useConnection } from '../providers/ConnectionProvider.jsx';
 import { getErrorMessage } from '../api/http.js';
 import { continueReading } from '../library.js';
-import { stampThud, tick } from '../haptics.js';
-import { nextChapter } from '../types.js';
 import { fonts } from '../theme.js';
 import { useThemed } from '../providers/ThemeProvider.jsx';
 
@@ -78,10 +76,8 @@ function ContinueRail() {
   if (reading.length === 0) return null;
   async function plusOne(entry) {
     setError('');
-    const next = nextChapter(entry);
     try {
-      await updateEntry.mutateAsync({ entry, changes: { ...next, listId: entry.listId } });
-      if (next.status === 'completed') stampThud();else tick();
+      await incrementChapter(updateEntry, entry);
     } catch (cause) { setError(getErrorMessage(cause)); }
   }
   return <View style={styles.railWrap}>
@@ -270,7 +266,6 @@ const makeStyles = (colors) => StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   wordmark: { fontSize: 25, fontFamily: fonts.bold, letterSpacing: -0.8, color: colors.ink },
   intro: { paddingTop: 30, paddingBottom: 22, gap: 8 },
-  subtitle: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, lineHeight: 22 },
   searchBox: { minHeight: 52, borderWidth: 2, borderColor: colors.ink, borderRadius: 2, paddingLeft: 14, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.paper, gap: 10 },
   searchInput: { outlineStyle: 'none', fontFamily: fonts.regular, flex: 1, minWidth: 0, paddingVertical: 14, paddingRight: 10, color: colors.ink, fontSize: 16 },
   filterBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, marginTop: 12, gap: 8, flexWrap: 'wrap' },
