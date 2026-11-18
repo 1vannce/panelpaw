@@ -9,7 +9,7 @@ export function AppProviders({ children }) {
   return <ThemeProvider><Providers>{children}</Providers></ThemeProvider>;
 }
 function Providers({ children }) {
-  const { colors } = useTheme();
+  const { colors, ready: themeReady } = useTheme();
   const [fontsLoaded, fontError] = useFonts({
     'Geist-Regular': require('../../assets/fonts/Geist-Regular.ttf'),
     'Geist-Medium': require('../../assets/fonts/Geist-Medium.ttf'),
@@ -25,7 +25,8 @@ function Providers({ children }) {
     const listener = AppState.addEventListener('change', (state) => focusManager.setFocused(state === 'active'));
     return () => listener.remove();
   }, []);
-  if (!fontsLoaded && !fontError) {
+  // Wait for the saved theme too, so a chosen Light/Dark never flashes the system palette.
+  if (!themeReady || (!fontsLoaded && !fontError)) {
     return <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>
       <ActivityIndicator accessibilityLabel="Loading PanelPaw" color={colors.ink} />
     </View>;

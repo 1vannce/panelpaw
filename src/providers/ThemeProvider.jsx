@@ -8,9 +8,11 @@ const Context = createContext(null);
 export function ThemeProvider({ children }) {
   const system = useColorScheme();
   const [mode, setModeState] = useState('system');
+  const [ready, setReady] = useState(false);
   useEffect(() => {
     let alive = true;
-    AsyncStorage.getItem(THEME_STORAGE_KEY).then((saved) => { if (alive && isThemeMode(saved)) setModeState(saved); }).catch(() => {});
+    AsyncStorage.getItem(THEME_STORAGE_KEY).then((saved) => { if (alive && isThemeMode(saved)) setModeState(saved); })
+      .catch(() => {}).finally(() => { if (alive) setReady(true); });
     return () => { alive = false; };
   }, []);
   const setMode = useCallback((next) => {
@@ -20,8 +22,8 @@ export function ThemeProvider({ children }) {
   }, []);
   const value = useMemo(() => {
     const scheme = resolveScheme(mode, system);
-    return { mode, scheme, isDark: scheme === 'dark', colors: paletteFor(scheme), setMode };
-  }, [mode, system, setMode]);
+    return { mode, scheme, isDark: scheme === 'dark', colors: paletteFor(scheme), setMode, ready };
+  }, [mode, system, setMode, ready]);
   // Web: keep the page behind the app (overscroll, first paint) and native widgets in step.
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
