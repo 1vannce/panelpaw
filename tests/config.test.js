@@ -19,6 +19,13 @@ test('saved choices survive a new default, including the old demo and explicit d
   }
 });
 
+test('an invalid saved value falls back to the default and reports the problem instead of throwing', () => {
+  const settings = getTrackerConnection('http://insecure.example.test', mock);
+  assert.equal(settings.baseUrl, mock);
+  assert.equal(settings.defaultUrl, mock);
+  assert.match(settings.configurationError, /saved endpoint/);
+});
+
 test('a bad build default leaves an existing connection usable and reports a safe error', () => {
   for (const configured of ['https://YOUR_PROJECT.mockapi.io/api/v1', 'https://user:secret@example.test', 'invalid']) {
     const settings = getTrackerConnection(mock, configured);
