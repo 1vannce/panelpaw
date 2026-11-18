@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Chip, Cover, IconButton, Notice } from '../components/ui.jsx';
+import { Button, Chip, Cover, IconButton, Notice, PanelTitle, ScreenEnter } from '../components/ui.jsx';
 import { useCatalog } from '../hooks/useCatalog.js';
 import { colors, fonts } from '../theme.js';
 
@@ -31,14 +31,16 @@ function FeaturedTitle({ manga }) {
     <Pressable accessibilityRole="button" accessibilityLabel={`Explore ${manga.title}`}
       onPress={() => router.push(`/title/${manga.id}`)}
       style={({ pressed }) => [styles.feature, pressed && styles.pressed]}>
-      <Cover uri={manga.imageUrl} title={manga.title} width={72} height={102} />
-      <View style={styles.featureCopy}>
-        <Text style={styles.featureLabel}>POPULAR NOW</Text>
-        <Text numberOfLines={2} style={styles.featureTitle}>{manga.title}</Text>
-        <Text numberOfLines={1} style={styles.meta}>{[manga.type, ...manga.genres.slice(0, 2)].filter(Boolean).join(' · ')}</Text>
-        <Text style={styles.featureLink}>View details</Text>
-      </View>
-      <Ionicons name="arrow-forward-outline" size={19} color={colors.muted} />
+      {({ pressed, hovered }) => <>
+        <Cover uri={manga.imageUrl} title={manga.title} width={72} height={102} lifted={pressed || hovered} />
+        <View style={styles.featureCopy}>
+          <Text style={styles.featureLabel}>POPULAR NOW</Text>
+          <Text numberOfLines={2} style={styles.featureTitle}>{manga.title}</Text>
+          <Text numberOfLines={1} style={styles.meta}>{[manga.type, ...manga.genres.slice(0, 2)].filter(Boolean).join(' · ')}</Text>
+          <Text style={[styles.featureLink, hovered && { color: colors.highlight }]}>View details</Text>
+        </View>
+        <Ionicons name="arrow-forward-outline" size={19} color={hovered ? colors.highlight : colors.muted} />
+      </>}
     </Pressable>
   );
 }
@@ -84,7 +86,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <FlatList key={columns} data={gridTitles} numColumns={columns} keyExtractor={item => String(item.id)}
+      <ScreenEnter><FlatList key={columns} data={gridTitles} numColumns={columns} keyExtractor={item => String(item.id)}
         contentContainerStyle={[styles.content, { paddingHorizontal: gutter }]} columnWrapperStyle={{ gap, alignItems: 'flex-start' }}
         keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}
         ListHeaderComponent={
@@ -97,7 +99,7 @@ export default function HomeScreen() {
               <IconButton name="options-outline" label="Configure tracker connection" onPress={() => router.push('/connection')} />
             </View>
             <View style={styles.intro}>
-              <Text accessibilityRole="header" style={styles.heading}>Discover</Text>
+              <PanelTitle title="Discover" />
               <Text style={styles.subtitle}>Manga and manhwa, ready for your reading list.</Text>
             </View>
             <View style={styles.searchBox}>
@@ -149,13 +151,15 @@ export default function HomeScreen() {
             accessibilityLabel={`${item.title}, ${item.type}${item.score ? `, rated ${item.score.toFixed(1)} out of 10` : ''}. View details`}
             onPress={() => router.push(`/title/${item.id}`)}
             style={({ pressed }) => [styles.catalogCard, { width: cardWidth }, pressed && styles.pressed]}>
-            <Cover uri={item.imageUrl} title={item.title} width={cardWidth} height={Math.round(cardWidth * 1.42)} />
-            <View style={styles.cardMeta}>
-              <Text style={styles.meta}>{item.type || 'Manga'}</Text>
-              {item.score !== null && <View style={styles.score}><Ionicons name="star-outline" color={colors.muted} size={12} /><Text style={styles.meta}>{item.score.toFixed(1)}</Text></View>}
-            </View>
-            <Text numberOfLines={2} style={styles.cardTitle}>{item.title}</Text>
-            <Text numberOfLines={1} style={styles.cardGenres}>{item.genres.slice(0, 2).join(' · ')}</Text>
+            {({ pressed, hovered }) => <>
+              <Cover uri={item.imageUrl} title={item.title} width={cardWidth} height={Math.round(cardWidth * 1.42)} lifted={pressed || hovered} />
+              <View style={styles.cardMeta}>
+                <Text style={styles.meta}>{item.type || 'Manga'}</Text>
+                {item.score !== null && <View style={styles.score}><Ionicons name="star-outline" color={colors.muted} size={12} /><Text style={styles.meta}>{item.score.toFixed(1)}</Text></View>}
+              </View>
+              <Text numberOfLines={2} style={[styles.cardTitle, hovered && { color: colors.highlight }]}>{item.title}</Text>
+              <Text numberOfLines={1} style={styles.cardGenres}>{item.genres.slice(0, 2).join(' · ')}</Text>
+            </>}
           </Pressable>
         )}
         ListEmptyComponent={catalog.isPending ? (
@@ -171,7 +175,7 @@ export default function HomeScreen() {
         ListFooterComponent={<View style={styles.footer}>
           {catalog.hasNextPage && <Button label="Load more titles" variant="secondary" icon="arrow-down-outline" loading={catalog.isFetchingNextPage} onPress={() => void catalog.fetchNextPage()} />}
           <Text style={styles.attribution}>Catalog by Kitsu</Text>
-        </View>} />
+        </View>} /></ScreenEnter>
     </SafeAreaView>
   );
 }
@@ -183,7 +187,6 @@ const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   wordmark: { fontSize: 25, fontFamily: fonts.bold, letterSpacing: -0.8, color: colors.ink },
   intro: { paddingTop: 30, paddingBottom: 22, gap: 8 },
-  heading: { fontSize: 36, lineHeight: 44, letterSpacing: -1.1, fontFamily: fonts.semibold, color: colors.ink },
   subtitle: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, lineHeight: 22 },
   searchBox: { minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 6, paddingLeft: 14, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.paper, gap: 10 },
   searchInput: { fontFamily: fonts.regular, flex: 1, minWidth: 0, paddingVertical: 14, paddingRight: 10, color: colors.ink, fontSize: 16 },

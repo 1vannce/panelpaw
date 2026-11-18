@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Chip, Cover, IconButton, Notice, SectionHeading } from "../components/ui.jsx";
+import { Button, Chip, Cover, IconButton, Notice, ScreenEnter, SectionHeading } from "../components/ui.jsx";
 import { useTitle } from "../hooks/useCatalog.js";
 import { useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
@@ -80,7 +80,7 @@ export default function TitleDetailsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><ScreenEnter>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={styles.navigation}>
@@ -96,7 +96,7 @@ export default function TitleDetailsScreen() {
               <View style={styles.titleHero}>
 
                 <View style={styles.cover}>
-                  <Cover uri={manga.imageUrl} title={manga.title} width={width < 540 ? 110 : 164} height={width < 540 ? 160 : 235} />
+                  <Cover uri={manga.imageUrl} title={manga.title} width={width < 540 ? 110 : 164} height={width < 540 ? 160 : 235} stamp={entry?.status === 'completed'} />
                 </View>
                 <View style={styles.heroType}><Text style={styles.heroTypeText}>{manga.type || 'Manga'}</Text></View>
               </View>
@@ -172,7 +172,7 @@ export default function TitleDetailsScreen() {
           }
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>);
+    </ScreenEnter></SafeAreaView>);
 
 }
 
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   body: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, lineHeight: 22 },
   titleHero: { alignItems: 'flex-start', paddingVertical: 20, gap: 12 },
 
-  cover: { borderRadius: 4, overflow: 'hidden' },
+  cover: { paddingRight: 4, paddingBottom: 4 },
   heroType: { alignSelf: 'flex-start', paddingVertical: 4 },
   heroTypeText: { fontSize: 11, fontFamily: fonts.semibold, color: colors.accent, textTransform: 'uppercase', letterSpacing: 1.1 },
   titleBlock: { flex: 1, justifyContent: 'center', gap: 10, paddingVertical: 20 },

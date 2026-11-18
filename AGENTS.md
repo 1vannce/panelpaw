@@ -33,7 +33,8 @@ Stop the running Expo server before `npm ci` on Windows; it locks native files. 
 - Server state belongs in TanStack Query hooks, not in a second global store. Local React state is for inputs, filters and drafts.
 - All tracker I/O goes through `src/api/tracker.js` and `src/api/http.js`. Never retry writes automatically; only GETs may retry.
 - Never silently fall back to local data when the API fails; show the error state.
-- Use the theme tokens and `ui.jsx` primitives (black/white/gray palette, Geist Sans) rather than ad hoc styles.
+- Use the theme tokens and `ui.jsx` primitives (black/white/gray palette, Geist Sans) rather than ad hoc styles. The only colour is `colors.highlight` (hanko red), used for hover/press states and the 完 stamp only.
+- Motion uses `react-native-reanimated` through `ui.jsx` (`ScreenEnter`, `Cover` lift/stamp, `ProgressBar`). Keep it subtle and honour reduce motion (`useReducedMotion`, Reanimated's default `ReduceMotion.System`).
 - Reading statuses are `reading`, `planned`, `completed`, `on_hold`, `dropped`. Progress is a nonnegative integer, capped by the total when known (`null` when unknown). A title belongs to at most one custom list.
 - Catalog IDs are numeric Kitsu manga IDs. Space Kitsu requests ~1.05 s apart.
 - Match the surrounding code's style. Add dependencies only when necessary, and use `npx expo install` so versions match the SDK.
