@@ -11,6 +11,8 @@ import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
 import { getErrorMessage } from "../api/http.js";
 import { nextChapter, READING_STATUSES, STATUS_LABELS } from "../types.js";
+import { SORTS, sortEntries } from "../library.js";
+import { stampThud, tick } from "../haptics.js";
 
 export default function LibraryScreen() {
   const { colors, styles } = useThemed(makeStyles);
@@ -20,6 +22,7 @@ export default function LibraryScreen() {
   const actions = useTrackerMutations();
   const [status, setStatus] = useState('all');
   const [listId, setListId] = useState('all');
+  const [sort, setSort] = useState('recent');
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -37,10 +40,9 @@ export default function LibraryScreen() {
   const allEntries = entries.data ?? [];
   const allLists = lists.data ?? [];
   const selectedList = allLists.find((list) => list.id === listId);
-  const visible = allEntries.filter((entry) => (status === 'all' || entry.status === status) && (
+  const visible = sortEntries(allEntries.filter((entry) => (status === 'all' || entry.status === status) && (
   listId === 'all' || (listId === 'unfiled' ? !entry.listId : entry.listId === listId)) &&
-  entry.title.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim())).
-  sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  entry.title.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim())), sort);
   function openEditor(entry) {
     if (busy) return;
     setEditing(entry);setProgress(String(entry.progress));setEditStatus(entry.status);setEditList(entry.listId);setModalError('');
@@ -59,6 +61,7 @@ export default function LibraryScreen() {
     const next = nextChapter(entry);
     try {
       await actions.updateEntry.mutateAsync({ entry, changes: { ...next, listId: entry.listId } });
+      if (next.status === 'completed' && entry.status !== 'completed') stampThud();else tick();
       setNotice(next.status === 'completed' && entry.status !== 'completed' ? 'Last chapter read. Marked Completed.' :
       entry.status === 'planned' ? 'One more chapter. Moved to Reading.' : 'One more chapter. Progress saved.');
     } catch (cause) {setError(getErrorMessage(cause));}
@@ -106,6 +109,10 @@ export default function LibraryScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           <Chip label="All titles" selected={status === 'all'} onPress={() => setStatus('all')} />
           {READING_STATUSES.map((value) => <Chip key={value} label={STATUS_LABELS[value]} selected={status === value} onPress={() => setStatus(value)} />)}
+        </ScrollView>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chips, { alignItems: 'center' }]}>
+          <Text style={styles.label}>SORT BY</Text>
+          {SORTS.map((item) => <Chip key={item.value} label={item.label} selected={sort === item.value} onPress={() => setSort(item.value)} />)}
         </ScrollView>
         <SectionHeading title="Reading lists" action="Manage" onAction={() => {setManageLists(true);setModalError('');}} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>

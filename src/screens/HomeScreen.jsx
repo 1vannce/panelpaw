@@ -1,11 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Button, Chip, Cover, EmptyArt, IconButton, Masthead, Notice, ScreenEnter, SkeletonCover, Tag, ThemeToggle } from '../components/ui.jsx';
+import { Button, Chip, Cover, EmptyArt, IconButton, Masthead, Notice, ProgressBar, ScreenEnter, SkeletonCover, Tag, ThemeToggle } from '../components/ui.jsx';
 import { useCatalog } from '../hooks/useCatalog.js';
+import { useEntries, useTrackerMutations } from '../hooks/useTracker.js';
+import { useConnection } from '../providers/ConnectionProvider.jsx';
+import { getErrorMessage } from '../api/http.js';
+import { continueReading } from '../library.js';
+import { stampThud, tick } from '../haptics.js';
+import { nextChapter } from '../types.js';
 import { fonts } from '../theme.js';
 import { useThemed } from '../providers/ThemeProvider.jsx';
 
@@ -59,6 +65,46 @@ function FeaturedTitle({ manga }) {
   );
 }
 
+// Titles you are partway through, with a one-tap +1. Hidden until the library is connected and has some.
+function ContinueRail() {
+  const { colors, styles } = useThemed(makeStyles);
+  const connection = useConnection();
+  const entries = useEntries();
+  const { updateEntry } = useTrackerMutations();
+  const [error, setError] = useState('');
+  if (!connection.isConfigured) return null;
+  if (entries.isError) return <View style={styles.railWrap}><Notice title="Could not load your reading list" message={getErrorMessage(entries.error)} actionLabel="Try again" onAction={() => void entries.refetch()} tone="error" /></View>;
+  const reading = continueReading(entries.data ?? []);
+  if (reading.length === 0) return null;
+  async function plusOne(entry) {
+    setError('');
+    const next = nextChapter(entry);
+    try {
+      await updateEntry.mutateAsync({ entry, changes: { ...next, listId: entry.listId } });
+      if (next.status === 'completed') stampThud();else tick();
+    } catch (cause) { setError(getErrorMessage(cause)); }
+  }
+  return <View style={styles.railWrap}>
+    <View style={styles.railHead}><Tag label="CONTINUE READING" /><Text style={styles.meta}>{reading.length} in progress</Text></View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail}>
+      {reading.map((entry) => <View key={entry.id} style={styles.railCard}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`View ${entry.title}`} onPress={() => router.push(`/title/${entry.mangaId}`)} style={styles.railTop}>
+          {({ pressed, hovered }) => <>
+            <Cover uri={entry.imageUrl} title={entry.title} width={56} height={80} lifted={pressed || hovered} />
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text numberOfLines={2} style={[styles.railTitle, hovered && { color: colors.highlight }]}>{entry.title}</Text>
+              <Text style={styles.meta}>Chapter {entry.progress}{entry.totalChapters !== null ? ` / ${entry.totalChapters}` : ''}</Text>
+            </View>
+          </>}
+        </Pressable>
+        <ProgressBar value={entry.progress} max={entry.totalChapters} />
+        <Button label="+1 chapter" variant="secondary" disabled={updateEntry.isPending || (entry.totalChapters !== null && entry.progress >= entry.totalChapters)} onPress={() => void plusOne(entry)} />
+      </View>)}
+    </ScrollView>
+    {error ? <Notice title="Change not saved" message={error} tone="error" /> : null}
+  </View>;
+}
+
 export default function HomeScreen() {
   const { colors, styles } = useThemed(makeStyles);
   const { width } = useWindowDimensions();
@@ -68,6 +114,21 @@ export default function HomeScreen() {
   const [genre, setGenre] = useState('');
   const [genresOpen, setGenresOpen] = useState(true);
   const catalog = useCatalog(debouncedQuery, format, genre);
+  const searchRef = useRef(null);
+  const [searchFocused, setSearchFocused] = useState(false);
+  // Web: press "/" anywhere outside a text field to jump to search.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const onKey = (event) => {
+      const target = event.target;
+      const typing = target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+      if (event.key !== '/' || typing || event.metaKey || event.ctrlKey || event.altKey) return;
+      event.preventDefault();
+      searchRef.current?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
   const columns = width >= 1000 ? 5 : width >= 760 ? 4 : width >= 540 ? 3 : 2;
   const gutter = width < 540 ? 20 : 32;
   const gap = width < 540 ? 16 : 24;
@@ -119,9 +180,9 @@ export default function HomeScreen() {
             <View style={styles.intro}>
               <Masthead eyebrow="PanelPaw / discover" title="Discover" subtitle="Manga and manhwa, ready for your reading list." />
             </View>
-            <View style={styles.searchBox}>
+            <View style={[styles.searchBox, searchFocused && { borderColor: colors.highlight }]}>
               <Ionicons name="search-outline" size={20} color={colors.muted} />
-              <TextInput accessibilityLabel="Search manga and manhwa" placeholder="Search by title"
+              <TextInput ref={searchRef} onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} accessibilityLabel="Search manga and manhwa" placeholder={Platform.OS === 'web' ? 'Search by title (press /)' : 'Search by title'}
                 placeholderTextColor={colors.muted} value={query} onChangeText={setQuery} returnKeyType="search"
                 autoCapitalize="none" autoCorrect={false} onSubmitEditing={() => setDebouncedQuery(query.trim())} style={styles.searchInput} />
               {query.length > 0 && <IconButton name="close-outline" label="Clear search" onPress={() => { setQuery(''); setDebouncedQuery(''); }} />}
@@ -150,6 +211,7 @@ export default function HomeScreen() {
                 <Text style={styles.clearText}>Clear filters</Text>
               </Pressable>
             </View>}
+            {!hasFilters && <ContinueRail />}
             {featured && <FeaturedTitle manga={featured} />}
             <View style={styles.catalogHeading}>
               <View style={{ flex: 1, gap: 5 }}>
@@ -210,7 +272,7 @@ const makeStyles = (colors) => StyleSheet.create({
   intro: { paddingTop: 30, paddingBottom: 22, gap: 8 },
   subtitle: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, lineHeight: 22 },
   searchBox: { minHeight: 52, borderWidth: 2, borderColor: colors.ink, borderRadius: 2, paddingLeft: 14, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.paper, gap: 10 },
-  searchInput: { outlineColor: colors.highlight, fontFamily: fonts.regular, flex: 1, minWidth: 0, paddingVertical: 14, paddingRight: 10, color: colors.ink, fontSize: 16 },
+  searchInput: { outlineStyle: 'none', fontFamily: fonts.regular, flex: 1, minWidth: 0, paddingVertical: 14, paddingRight: 10, color: colors.ink, fontSize: 16 },
   filterBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, marginTop: 12, gap: 8, flexWrap: 'wrap' },
   formats: { flexDirection: 'row', gap: 20 },
   formatButton: { minHeight: 48, justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
@@ -231,6 +293,12 @@ const makeStyles = (colors) => StyleSheet.create({
   featureCta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   featureLink: { fontFamily: fonts.semibold, fontSize: 13, color: colors.highlight },
   cardIndex: { fontFamily: fonts.bold, fontSize: 12, color: colors.highlight, fontVariant: ['tabular-nums'], letterSpacing: 0.5 },
+  railWrap: { marginTop: 22, gap: 12 },
+  railHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rail: { gap: 14, paddingRight: 8 },
+  railCard: { width: 250, gap: 8, padding: 12, borderWidth: 2, borderColor: colors.ink, backgroundColor: colors.paper },
+  railTop: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  railTitle: { fontFamily: fonts.semibold, fontSize: 14, lineHeight: 19, color: colors.ink },
   skeletons: { flexDirection: 'row', flexWrap: 'wrap', paddingTop: 4 },
   catalogHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 24, paddingBottom: 20, gap: 12 },
   sectionTitle: { fontSize: 20, fontFamily: fonts.semibold, color: colors.ink },
