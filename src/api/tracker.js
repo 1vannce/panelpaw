@@ -25,20 +25,29 @@ export function validateProgress(progress, totalChapters) {
   return progress;
 }
 
+// Some REST backends (MockAPI string fields, proxies) return numbers as digit strings.
+function integer(value) {
+  if (typeof value === 'string' && /^\d+$/.test(value.trim())) return Number(value.trim());
+  return Number.isSafeInteger(value) ? value : NaN;
+}
+
 export function parseEntry(value) {
   const raw = record(value, 'Tracker entry');
-  if (!nonempty(raw.id) || !Number.isSafeInteger(raw.mangaId) || Number(raw.mangaId) <= 0 ||
+  const mangaId = integer(raw.mangaId);
+  const progress = integer(raw.progress);
+  const totalChapters = raw.totalChapters === null ? null : integer(raw.totalChapters);
+  if (!nonempty(raw.id) || !Number.isSafeInteger(mangaId) || mangaId <= 0 ||
   !nonempty(raw.title) || typeof raw.imageUrl !== 'string' || !nonempty(raw.format) ||
-  !(raw.totalChapters === null || Number.isSafeInteger(raw.totalChapters) && Number(raw.totalChapters) >= 0) ||
-  !status(raw.status) || !Number.isSafeInteger(raw.progress) || Number(raw.progress) < 0 ||
+  !(totalChapters === null || Number.isSafeInteger(totalChapters) && totalChapters >= 0) ||
+  !status(raw.status) || !Number.isSafeInteger(progress) || progress < 0 ||
   !(raw.listId === null || nonempty(raw.listId)) || !date(raw.createdAt) || !date(raw.updatedAt)) {
     return invalidResponse('Tracker entry');
   }
-  if (raw.totalChapters !== null && Number(raw.progress) > Number(raw.totalChapters)) return invalidResponse('Tracker progress');
+  if (totalChapters !== null && progress > totalChapters) return invalidResponse('Tracker progress');
   return {
-    id: raw.id, mangaId: Number(raw.mangaId), title: raw.title, imageUrl: raw.imageUrl,
-    format: raw.format, totalChapters: raw.totalChapters, status: raw.status,
-    progress: Number(raw.progress), listId: raw.listId,
+    id: raw.id, mangaId, title: raw.title, imageUrl: raw.imageUrl,
+    format: raw.format, totalChapters, status: raw.status,
+    progress, listId: raw.listId,
     createdAt: raw.createdAt, updatedAt: raw.updatedAt
   };
 }
@@ -181,8 +190,10 @@ export function createTrackerApi(baseUrl) {
       const entries = (await listEntries()).filter((entry) => entry.listId === id);
       let detached = 0;
       try {
-        for (const entry of entries) {
-          await writeEntry({ ...entry, listId: null, updatedAt: new Date().toISOString() });
+        for (const listed of entries) {
+          // Re-read so a change made since the snapshot is not overwritten by a stale PUT.
+          const entry = await getEntry(listed.id);
+          if (entry.listId === id) await writeEntry({ ...entry, listId: null, updatedAt: new Date().toISOString() });
           detached += 1;
         }
       } catch (error) {
