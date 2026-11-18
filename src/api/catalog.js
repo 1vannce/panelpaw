@@ -75,7 +75,6 @@ export function normalizeManga(value, included = []) {
     score: Number.isFinite(score) && score >= 0 && score <= 100 ? score / 10 : null,
     status: statuses[publicationStatus] ?? (publicationStatus || 'Unknown'),
     genres: categoryNames(raw, included),
-    authors: [],
     url: 'https://kitsu.app/manga/' + (text(attributes.slug) ? encodeURIComponent(text(attributes.slug)) : id)
   };
 }

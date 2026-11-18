@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Chip, Cover, IconButton, Notice, ScreenEnter, SectionHeading } from "../components/ui.jsx";
@@ -34,14 +34,24 @@ export default function TitleDetailsScreen() {
   const [dirty, setDirty] = useState(false);
   const pending = addEntry.isPending || updateEntry.isPending;
 
+  const dirtyRef = useRef(false);
+  const formKey = useRef('');
+
+  // Reload the form from the saved entry, but never overwrite unsaved edits on a background refetch.
   useEffect(() => {
+    const key = `${entry?.id}|${id}|${connection.baseUrl}`;
+    const sameForm = formKey.current === key;
+    formKey.current = key;
+    if (sameForm && dirtyRef.current) return;
     setStatus(entry?.status ?? 'planned');
     setProgress(String(entry?.progress ?? 0));
     setListId(entry?.listId ?? null);
+    dirtyRef.current = false;
     setDirty(false);
   }, [entry?.id, entry?.updatedAt, id, connection.baseUrl]);
 
   function changed() {
+    dirtyRef.current = true;
     setDirty(true);
     setMessage('');
     setError('');
@@ -74,6 +84,7 @@ export default function TitleDetailsScreen() {
       const changes = { status, progress: chapter, listId };
       if (entry) await updateEntry.mutateAsync({ entry, changes });else
       await addEntry.mutateAsync({ manga, ...changes });
+      dirtyRef.current = false;
       setDirty(false);
       setMessage(entry ? 'Your reading progress is saved.' : 'Title saved to your library.');
     } catch (reason) {
@@ -105,7 +116,7 @@ export default function TitleDetailsScreen() {
               <View style={styles.titleBlock}>
                 <Text accessibilityRole="header" style={[styles.title, width < 540 && { fontSize: 23, lineHeight: 29 }]}>{manga.title}</Text>
                 {manga.originalTitle && manga.originalTitle !== manga.title && <Text style={styles.originalTitle}>{manga.originalTitle}</Text>}
-                <Text style={styles.author}>{manga.authors.length ? `By ${manga.authors.join(', ')}` : manga.type}</Text>
+                <Text style={styles.author}>{manga.type}</Text>
               </View>
               </View>
               <View style={styles.stats}>

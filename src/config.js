@@ -33,5 +33,10 @@ export function getTrackerConnection(saved, configured = '') {
     configurationError = error.message;
   }
   // Keep explicit choices, including disconnect (''). Moving a library is deliberate.
-  return { baseUrl: normalizeBaseUrl(saved ?? defaultUrl), defaultUrl, configurationError };
+  // A saved value that no longer validates must not hide the default or the configuration error.
+  let baseUrl = defaultUrl;
+  if (saved !== null && saved !== undefined) {
+    try {baseUrl = normalizeBaseUrl(saved);} catch (error) {configurationError ??= 'The saved endpoint is no longer valid. ' + error.message;}
+  }
+  return { baseUrl, defaultUrl, configurationError };
 }

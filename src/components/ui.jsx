@@ -224,7 +224,7 @@ export function Notice({ title, message, actionLabel, onAction, tone = 'info' })
 }
 
 export function SectionHeading({ title, subtitle, action, onAction }) {
-  const { colors, styles } = useThemed(makeStyles);
+  const { styles } = useThemed(makeStyles);
   return <View style={styles.sectionRow}><View style={{ flex: 1, gap: 5 }}>
     <Text accessibilityRole="header" style={styles.sectionTitle}>{title}</Text>
     {subtitle ? <Text style={styles.body}>{subtitle}</Text> : null}</View>
@@ -232,7 +232,7 @@ export function SectionHeading({ title, subtitle, action, onAction }) {
 }
 
 export function PageHeader({ eyebrow, title, subtitle, action }) {
-  const { colors, styles } = useThemed(makeStyles);
+  const { styles } = useThemed(makeStyles);
   return <View style={{ gap: 12 }}>
     {(eyebrow || action) && <View style={styles.pageTop}><Text style={styles.eyebrow}>{eyebrow}</Text>{action}</View>}
     <PanelTitle title={title} />

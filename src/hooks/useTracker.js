@@ -3,6 +3,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createTrackerApi } from "../api/tracker.js";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { markAppUsed } from "../usage.js";
+import { stampThud, tick } from "../haptics.js";
+import { nextChapter } from "../types.js";
+
+/** One more chapter read: saves the next progress/status and plays the haptic. Throws on failure. */
+export async function incrementChapter(updateEntry, entry) {
+  const next = nextChapter(entry);
+  await updateEntry.mutateAsync({ entry, changes: { ...next, listId: entry.listId } });
+  const finished = next.status === 'completed' && entry.status !== 'completed';
+  if (finished) stampThud();else tick();
+  return { finished, started: entry.status === 'planned' };
+}
 
 function useTrackerApi() {
   const connection = useConnection();

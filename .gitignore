@@ -9,7 +9,9 @@ test-results/
 
 
 .playwright-cli/
-output/playwright/
+.playwright-mcp/
+.claude/
+output/
 .vercel/
 site/.next/
 site/out/

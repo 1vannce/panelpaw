@@ -11,7 +11,7 @@ const baseUrl = 'https://tracker.example.test/api/v1';
 const manga = {
   id: 42, title: 'Test manga', originalTitle: 'Test manga', imageUrl: 'https://example.test/cover.jpg',
   type: 'Manga', synopsis: 'Example', chapters: 10, score: 8, status: 'Finished',
-  genres: ['Adventure'], authors: [], url: 'https://kitsu.app/manga/42'
+  genres: ['Adventure'], url: 'https://kitsu.app/manga/42'
 };
 const entry = {
   id: 'e1', mangaId: 42, title: manga.title, imageUrl: manga.imageUrl, format: 'Manga',
@@ -178,11 +178,16 @@ test('malformed successful responses and unconfigured endpoints fail honestly', 
 
 test('a failed list detach keeps the list and reports partial completion', async () => {
   const methods = [];
+  const first = { ...entry, listId: 'list1' };
   const second = { ...entry, id: 'e2', mangaId: 43, listId: 'list1' };
-  globalThis.fetch = async (_input, init) => {
+  let puts = 0;
+  globalThis.fetch = async (input, init) => {
     const method = init?.method ?? 'GET';methods.push(method);
-    if (method === 'GET') return json([{ ...entry, listId: 'list1' }, second]);
-    if (methods.length === 2) return json(JSON.parse(String(init?.body)));
+    if (method === 'GET') {
+      const id = new URL(String(input)).pathname.split('/entries/')[1];
+      return json(id ? [first, second].find((item) => item.id === id) : [first, second]);
+    }
+    if (++puts === 1) return json(JSON.parse(String(init?.body)));
     return json({ message: 'Unavailable' }, 503);
   };
   await assert.rejects(createTrackerApi(baseUrl).removeList('list1'), (error) => {
@@ -191,7 +196,30 @@ test('a failed list detach keeps the list and reports partial completion', async
     assert.match(error.message, /1 of 2/);
     return true;
   });
-  assert.deepEqual(methods, ['GET', 'PUT', 'PUT']);
+  assert.deepEqual(methods, ['GET', 'GET', 'PUT', 'GET', 'PUT']);
+});
+
+test('list deletion re-reads each entry and skips one that moved to another list meanwhile', async () => {
+  const methods = [];
+  const stale = { ...entry, listId: 'list1' };
+  globalThis.fetch = async (input, init) => {
+    const method = init?.method ?? 'GET';methods.push(method);
+    const id = new URL(String(input)).pathname.split('/entries/')[1];
+    if (method === 'GET') return json(id ? { ...stale, listId: 'other' } : [stale]);
+    return new Response(null, { status: 204 });
+  };
+  await createTrackerApi(baseUrl).removeList('list1');
+  assert.deepEqual(methods, ['GET', 'GET', 'DELETE']);
+});
+
+test('entries tolerate backends that return numeric fields as digit strings', () => {
+  const parsed = parseEntry({ ...entry, mangaId: '42', totalChapters: '10', progress: '3' });
+  assert.equal(parsed.mangaId, 42);
+  assert.equal(parsed.totalChapters, 10);
+  assert.equal(parsed.progress, 3);
+  for (const bad of [{ progress: '1.5' }, { progress: 'abc' }, { mangaId: '0' }, { progress: -1 }, { totalChapters: '' }]) {
+    assert.throws(() => parseEntry({ ...entry, ...bad }), /invalid fields/);
+  }
 });
 
 test('write failures are never retried even when retries are requested', async () => {
