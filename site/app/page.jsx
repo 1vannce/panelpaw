@@ -1,6 +1,6 @@
 import CatIcon from '../components/CatIcon';
 import Motion from '../components/Motion';
-import { APP_URL, CELL_COUNT, SAMPLE, STATUSES } from '../lib/site';
+import { APP_URL, CELL_COUNT, DISCOVER, LISTS, MANIFESTO, SAMPLE, SEARCH_QUERY, STATUSES } from '../lib/site';
 
 const WORDMARK = 'PANELPAW'.split('');
 const MARQUEE = STATUSES.map((s) => s.label);
@@ -26,6 +26,8 @@ function Header() {
         <a className="brand" href="#top" data-cursor="Top"><CatIcon />PanelPaw</a>
         <nav className="nav" aria-label="Sections">
           <a className="hide-sm" href="#track">Track</a>
+          <a className="hide-sm" href="#discover">Discover</a>
+          <a className="hide-sm" href="#lists">Lists</a>
           <a className="btn sm solid" href={APP_URL} data-magnetic data-cursor="Open">Open app</a>
         </nav>
       </div>
@@ -135,6 +137,97 @@ function Track() {
   );
 }
 
+function Manifesto() {
+  return (
+    <section className="manifesto" aria-labelledby="manifesto-label">
+      <div className="wrap">
+        <span className="label" id="manifesto-label">Why PanelPaw</span>
+        <p className="manifesto-text">
+          {MANIFESTO.split(' ').map((word, i) => <span className="w" key={i}>{word} </span>)}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function MiniCover({ art, title }) {
+  return (
+    <div className={`mini-cover art-${art}`} aria-hidden="true">
+      <span className="mini-title">{title}</span>
+    </div>
+  );
+}
+
+function Discover() {
+  return (
+    <section className="discover" id="discover" aria-labelledby="discover-title">
+      <div className="wrap disc-head">
+        <span className="label">Discover</span>
+        <h2 id="discover-title">Discover reads right to left, like a manga.</h2>
+        <p>Search the Kitsu catalog for any manga or manhwa, open a title, and save it to your library.</p>
+      </div>
+      <div className="disc-viewport">
+        <ol className="disc-strip" aria-label="Sample search results, in reading order">
+          <li className="disc-card disc-search">
+            <span className="label muted">Panel 00 · Search</span>
+            <div className="search-box">
+              <span className="search-icon" aria-hidden="true" />
+              <span className="typed" data-text={SEARCH_QUERY}>{SEARCH_QUERY}</span><span className="caret" aria-hidden="true" />
+            </div>
+            <p>Results come straight from the Kitsu catalog. Covers here are placeholders.</p>
+            <span className="read-dir label" aria-hidden="true">← Read this way</span>
+          </li>
+          {DISCOVER.map((t, i) => (
+            <li className="disc-card" key={t.title}>
+              <MiniCover art={t.art} title={t.title} />
+              <div className="disc-meta">
+                <span className="label muted">Panel {String(i + 1).padStart(2, '0')}</span>
+                <strong>{t.title}</strong>
+                <span className="label">{t.type} · {t.chapters} ch.</span>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+function Lists() {
+  return (
+    <section className="lists" id="lists" aria-labelledby="lists-title">
+      <div className="wrap">
+        <div className="lists-head">
+          <span className="label">Lists</span>
+          <h2 id="lists-title">Sort your shelf your way.</h2>
+          <p>Make your own lists and move titles between them. Each title sits in one list at a time, so nothing is counted twice.</p>
+        </div>
+        <div className="lists-board">
+          {LISTS.map((list) => (
+            <div className="list-col" key={list.name}>
+              <div className="list-name">
+                <strong>{list.name}</strong>
+                <span className="label muted">{list.entries.length} titles</span>
+              </div>
+              <ul className="stack">
+                {list.entries.map((e) => (
+                  <li className="stack-card" key={e.title}>
+                    <MiniCover art={e.art} title={e.title} />
+                    <div>
+                      <strong>{e.title}</strong>
+                      <span className="label muted">{e.status}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Cta() {
   return (
     <section className="cta" aria-labelledby="cta-title">
@@ -171,7 +264,10 @@ export default function Home() {
       <main>
         <Hero />
         <Marquee />
+        <Manifesto />
         <Track />
+        <Discover />
+        <Lists />
         <Cta />
       </main>
       <Footer />
