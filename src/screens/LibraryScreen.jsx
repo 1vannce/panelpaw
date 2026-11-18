@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Button, Chip, Cover, IconButton, Notice, PageHeader, ProgressBar, ScreenEnter, SectionHeading, ThemeToggle } from "../components/ui.jsx";
+import { Button, Chip, Cover, EmptyArt, IconButton, Notice, PageHeader, ProgressBar, ScreenEnter, SectionHeading, ThemeToggle } from "../components/ui.jsx";
 import { fonts } from "../theme.js";
 import { useThemed } from "../providers/ThemeProvider.jsx";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
@@ -126,7 +126,7 @@ export default function LibraryScreen() {
     refreshControl={connection.isConfigured ? <RefreshControl refreshing={entries.isRefetching || lists.isRefetching} onRefresh={refresh} tintColor={colors.accent} /> : undefined}
     ListEmptyComponent={connection.isConfigured ? entries.isPending ? <ActivityIndicator color={colors.accent} style={{ padding: 36 }} /> : entries.isError ?
     <Notice title="Could not load your library" message={getErrorMessage(entries.error)} tone="error" actionLabel="Try again" onAction={refresh} /> :
-    <View style={styles.empty}><Ionicons name="library-outline" size={40} color={colors.accent} />
+    <View style={styles.empty}><EmptyArt />
           <Text style={styles.emptyTitle}>{allEntries.length ? 'No matching stories' : 'No saved titles yet'}</Text>
           <Text style={styles.body}>{allEntries.length ? 'Try another filter or search.' : 'Discover a manga or manhwa and add it to your library.'}</Text>
           <Button label="Explore titles" variant="secondary" onPress={() => router.push('/')} /></View> : null}

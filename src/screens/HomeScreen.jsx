@@ -3,7 +3,8 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Chip, Cover, IconButton, Notice, PanelTitle, ScreenEnter, ThemeToggle } from '../components/ui.jsx';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Button, Chip, Cover, EmptyArt, IconButton, Masthead, Notice, ScreenEnter, SkeletonCover, Tag, ThemeToggle } from '../components/ui.jsx';
 import { useCatalog } from '../hooks/useCatalog.js';
 import { fonts } from '../theme.js';
 import { useThemed } from '../providers/ThemeProvider.jsx';
@@ -27,21 +28,32 @@ const GENRES = [
   { value: 'supernatural', label: 'Supernatural' },
 ];
 
+const toneImage = require('../../assets/textures/screentone.png');
+
+// Large "splash panel" for the top title: big cover beside the copy on wide screens.
 function FeaturedTitle({ manga }) {
   const { colors, styles } = useThemed(makeStyles);
+  const { width } = useWindowDimensions();
+  const wide = width >= 640;
+  const coverW = wide ? 176 : 104;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Explore ${manga.title}`}
-      onPress={() => router.push(`/title/${manga.id}`)}
-      style={({ pressed }) => [styles.feature, pressed && styles.pressed]}>
+      onPress={() => router.push(`/title/${manga.id}`)} style={styles.featureWrap}>
       {({ pressed, hovered }) => <>
-        <Cover uri={manga.imageUrl} title={manga.title} width={72} height={102} lifted={pressed || hovered} />
-        <View style={styles.featureCopy}>
-          <Text style={styles.featureLabel}>POPULAR NOW</Text>
-          <Text numberOfLines={2} style={styles.featureTitle}>{manga.title}</Text>
-          <Text numberOfLines={1} style={styles.meta}>{[manga.type, ...manga.genres.slice(0, 2)].filter(Boolean).join(' · ')}</Text>
-          <Text style={styles.featureLink}>View details</Text>
+        <View style={styles.featureShadow} />
+        <View style={[styles.feature, { gap: wide ? 28 : 16 }]}>
+          <Image source={toneImage} resizeMode="repeat" accessible={false} style={[styles.featureTone, colors.toneTint && { tintColor: colors.toneTint }]} />
+          <Cover uri={manga.imageUrl} title={manga.title} width={coverW} height={Math.round(coverW * 1.42)} lifted={pressed || hovered} />
+          <View style={styles.featureCopy}>
+            <Tag label="POPULAR NOW" />
+            <Text numberOfLines={3} style={[styles.featureTitle, wide && { fontSize: 38, lineHeight: 44 }]}>{manga.title}</Text>
+            <Text numberOfLines={1} style={styles.meta}>{[manga.type, ...manga.genres.slice(0, 3)].filter(Boolean).join(' · ')}</Text>
+            <View style={styles.featureCta}>
+              <Text style={[styles.featureLink, hovered && { textDecorationLine: 'underline' }]}>View details</Text>
+              <Ionicons name="arrow-forward-outline" size={17} color={colors.highlight} />
+            </View>
+          </View>
         </View>
-        <Ionicons name="arrow-forward-outline" size={19} color={hovered ? colors.highlight : colors.muted} />
       </>}
     </Pressable>
   );
@@ -105,8 +117,7 @@ export default function HomeScreen() {
               </View>
             </View>
             <View style={styles.intro}>
-              <PanelTitle title="Discover" />
-              <Text style={styles.subtitle}>Manga and manhwa, ready for your reading list.</Text>
+              <Masthead eyebrow="PanelPaw / discover" title="Discover" subtitle="Manga and manhwa, ready for your reading list." />
             </View>
             <View style={styles.searchBox}>
               <Ionicons name="search-outline" size={20} color={colors.muted} />
@@ -152,27 +163,31 @@ export default function HomeScreen() {
             </View>}
           </View>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.delay(Math.min(index, columns * 2) * 45).duration(340)} style={{ width: cardWidth }}>
           <Pressable accessibilityRole="button"
             accessibilityLabel={`${item.title}, ${item.type}${item.score ? `, rated ${item.score.toFixed(1)} out of 10` : ''}. View details`}
             onPress={() => router.push(`/title/${item.id}`)}
-            style={({ pressed }) => [styles.catalogCard, { width: cardWidth }, pressed && styles.pressed]}>
+            style={({ pressed }) => [styles.catalogCard, pressed && styles.pressed]}>
             {({ pressed, hovered }) => <>
               <Cover uri={item.imageUrl} title={item.title} width={cardWidth} height={Math.round(cardWidth * 1.42)} lifted={pressed || hovered} />
               <View style={styles.cardMeta}>
-                <Text style={styles.meta}>{item.type || 'Manga'}</Text>
-                {item.score !== null && <View style={styles.score}><Ionicons name="star-outline" color={colors.muted} size={12} /><Text style={styles.meta}>{item.score.toFixed(1)}</Text></View>}
+                <Text style={styles.cardIndex}>{String(index + (featured ? 2 : 1)).padStart(2, '0')}<Text style={styles.meta}>  {item.type || 'Manga'}</Text></Text>
+                {item.score !== null && <View style={styles.score}><Ionicons name="star" color={colors.highlight} size={12} /><Text style={styles.meta}>{item.score.toFixed(1)}</Text></View>}
               </View>
               <Text numberOfLines={2} style={[styles.cardTitle, hovered && { color: colors.highlight }]}>{item.title}</Text>
               <Text numberOfLines={1} style={styles.cardGenres}>{item.genres.slice(0, 2).join(' · ')}</Text>
             </>}
           </Pressable>
+          </Animated.View>
         )}
         ListEmptyComponent={catalog.isPending ? (
-          <View style={styles.empty}><ActivityIndicator color={colors.accent} /><Text style={styles.subtitle}>Loading titles…</Text></View>
+          <View accessibilityLabel="Loading titles" accessibilityLiveRegion="polite" style={[styles.skeletons, { gap }]}>
+            {Array.from({ length: columns * 2 }, (_, i) => <View key={i} style={{ width: cardWidth, marginBottom: 12 }}><SkeletonCover width={cardWidth} height={Math.round(cardWidth * 1.42)} /></View>)}
+          </View>
         ) : !catalog.isError && !featured ? (
           <View style={styles.empty}>
-            <Ionicons name="search-outline" size={28} color={colors.muted} />
+            <EmptyArt />
             <Text style={styles.sectionTitle}>No titles found</Text>
             <Text style={styles.emptyText}>Try another title, format, or genre.</Text>
             <Button label="Clear filters" variant="secondary" onPress={clearFilters} />
@@ -194,8 +209,8 @@ const makeStyles = (colors) => StyleSheet.create({
   wordmark: { fontSize: 25, fontFamily: fonts.bold, letterSpacing: -0.8, color: colors.ink },
   intro: { paddingTop: 30, paddingBottom: 22, gap: 8 },
   subtitle: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, lineHeight: 22 },
-  searchBox: { minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 6, paddingLeft: 14, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.paper, gap: 10 },
-  searchInput: { fontFamily: fonts.regular, flex: 1, minWidth: 0, paddingVertical: 14, paddingRight: 10, color: colors.ink, fontSize: 16 },
+  searchBox: { minHeight: 52, borderWidth: 2, borderColor: colors.ink, borderRadius: 2, paddingLeft: 14, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.paper, gap: 10 },
+  searchInput: { outlineColor: colors.highlight, fontFamily: fonts.regular, flex: 1, minWidth: 0, paddingVertical: 14, paddingRight: 10, color: colors.ink, fontSize: 16 },
   filterBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, marginTop: 12, gap: 8, flexWrap: 'wrap' },
   formats: { flexDirection: 'row', gap: 20 },
   formatButton: { minHeight: 48, justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
@@ -207,11 +222,16 @@ const makeStyles = (colors) => StyleSheet.create({
   filterSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   clearFilters: { minHeight: 44, justifyContent: 'center' },
   clearText: { fontFamily: fonts.regular, fontSize: 12, color: colors.highlight, textDecorationLine: 'underline' },
-  feature: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
-  featureCopy: { flex: 1, gap: 6 },
-  featureLabel: { fontSize: 10, letterSpacing: 1, fontFamily: fonts.bold, color: colors.highlight },
-  featureTitle: { fontSize: 20, lineHeight: 28, fontFamily: fonts.semibold, color: colors.ink },
-  featureLink: { fontFamily: fonts.semibold, fontSize: 12, color: colors.highlight, marginTop: 3 },
+  featureWrap: { marginTop: 22, marginRight: 6, marginBottom: 6, outlineColor: colors.highlight },
+  featureShadow: { position: 'absolute', top: 6, left: 6, right: -6, bottom: -6, backgroundColor: colors.ink },
+  feature: { flexDirection: 'row', alignItems: 'center', padding: 18, borderWidth: 3, borderColor: colors.ink, backgroundColor: colors.paper, overflow: 'hidden' },
+  featureTone: { position: 'absolute', top: 0, right: 0, width: '38%', height: '100%', opacity: 0.4 },
+  featureCopy: { flex: 1, gap: 9, backgroundColor: colors.paper, alignSelf: 'center', paddingVertical: 4, paddingRight: 8 },
+  featureTitle: { fontSize: 22, lineHeight: 28, fontFamily: fonts.bold, color: colors.ink, letterSpacing: -0.6 },
+  featureCta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  featureLink: { fontFamily: fonts.semibold, fontSize: 13, color: colors.highlight },
+  cardIndex: { fontFamily: fonts.bold, fontSize: 12, color: colors.highlight, fontVariant: ['tabular-nums'], letterSpacing: 0.5 },
+  skeletons: { flexDirection: 'row', flexWrap: 'wrap', paddingTop: 4 },
   catalogHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 24, paddingBottom: 20, gap: 12 },
   sectionTitle: { fontSize: 20, fontFamily: fonts.semibold, color: colors.ink },
   catalogCard: { marginBottom: 28 },
