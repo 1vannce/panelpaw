@@ -11,3 +11,5 @@ test-results/
 .playwright-cli/
 output/playwright/
 .vercel/
+site/.next/
+site/out/

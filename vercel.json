@@ -2,13 +2,18 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "npm ci",
-  "buildCommand": "npm run export:web",
+  "buildCommand": "npm run build:web",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "redirects": [
+    { "source": "/library", "destination": "/app/library", "permanent": false },
+    { "source": "/connection", "destination": "/app/connection", "permanent": false },
+    { "source": "/title/:id", "destination": "/app/title/:id", "permanent": false }
+  ],
   "rewrites": [
     {
-      "source": "/:path*",
-      "destination": "/"
+      "source": "/app/:path*",
+      "destination": "/app"
     }
   ]
 }
