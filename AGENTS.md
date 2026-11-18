@@ -10,7 +10,9 @@ Run from this directory (the repository root). Use Node 22.13+, 24.3+ or 26+.
 npm ci                          # install exact locked dependencies
 npm start                       # Expo dev server (npm run web / android / ios)
 npm test                        # node --test tests/*.test.js
-npm run export:web              # production web build into dist/
+npm run export:web              # app-only web build into dist/ (served at /)
+npm run build:web               # deploy build: landing site at /, app at /app, into dist/
+npm run site:dev                # landing site dev server on :3001 (run `npm --prefix site ci` first)
 npx expo install --check        # verify SDK-compatible dependency versions
 npx expo-doctor
 ```
@@ -27,6 +29,15 @@ Stop the running Expo server before `npm ci` on Windows; it locks native files. 
 - `src/components/ui.jsx`, `src/theme.js` shared UI primitives and tokens.
 - `src/config.js` endpoint normalization; `src/types.js` reading status values/labels.
 - `tests/` Node test runner tests for API contract and config. `docs/API_SETUP.md` is the REST contract and migration guide.
+- `site/` separate Next.js (static export) landing site with its own `package.json` and lockfile. `metro.config.cjs` keeps Metro out of it; `app.config.js` sets the app's `/app` base URL only when `EXPO_BASE_URL` is set (by `scripts/build-web.mjs`).
+
+## Landing site (`site/`)
+
+- Never import from `src/` or the root `node_modules`; copy brand assets instead. Do not use npm workspaces.
+- Static sample data only (`site/lib/site.js`); status labels match `src/types.js`. No real Kitsu covers in marketing art.
+- Motion: GSAP + Lenis in `site/components/Motion.jsx`. Every effect respects `prefers-reduced-motion`; markup must read fine without JS. No WebGL.
+- Palette: the app's black/white/gray plus one accent (`--accent`, hanko red) for hover and the 完 stamp only.
+- Vercel: one project (`panelpaw`). `vercel.json` rewrites `/app/*` to the app and redirects old app routes (`/library`, `/connection`, `/title/:id`) under `/app`.
 
 ## Conventions
 
@@ -41,13 +52,14 @@ Stop the running Expo server before `npm ci` on Windows; it locks native files. 
 ## Secrets and files not to touch
 
 - `.env` is gitignored and may hold a real endpoint. Do not print, commit or edit it. Only `.env.example` (blank placeholder) is tracked. Never put keys, tokens or dashboard URLs in tracked files.
-- Do not edit `dist/`, `.expo/`, `node_modules/`, `.npm-cache/`, `output/` (generated or local).
+- Do not edit `dist/`, `.expo/`, `node_modules/`, `.npm-cache/`, `output/`, `site/.next/`, `site/out/` (generated or local).
 - The anonymous Beeceptor demo endpoint expires around 2026-11-10; do not use it as a default. See `docs/API_SETUP.md` before changing connection logic.
 
 ## Verification
 
 - Run `npm test` after changing `src/api/`, `src/config.js` or validation logic, and add tests for new behavior there.
 - For UI changes, run the app (`npm run web`) and check the affected screen, including loading, empty and error states.
+- For `site/` or routing changes, run `npm run build:web`, serve `dist/`, and check `/` (desktop and phone width) and that `/app` loads the tracker.
 - Report only the checks you actually ran.
 
 ## Commits
