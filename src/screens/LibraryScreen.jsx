@@ -9,7 +9,7 @@ import { colors, fonts } from "../theme.js";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
 import { getErrorMessage } from "../api/http.js";
-import { READING_STATUSES, STATUS_LABELS } from "../types.js";
+import { nextChapter, READING_STATUSES, STATUS_LABELS } from "../types.js";
 
 export default function LibraryScreen() {
   const connection = useConnection();
@@ -54,11 +54,11 @@ export default function LibraryScreen() {
   }
   async function increment(entry) {
     setError('');setNotice('');
-    // Reading a chapter of a planned title means it has been started.
-    const started = entry.status === 'planned';
+    const next = nextChapter(entry);
     try {
-      await actions.updateEntry.mutateAsync({ entry, changes: { progress: entry.progress + 1, status: started ? 'reading' : entry.status, listId: entry.listId } });
-      setNotice(started ? 'One more chapter. Moved to Reading.' : 'One more chapter. Progress saved.');
+      await actions.updateEntry.mutateAsync({ entry, changes: { ...next, listId: entry.listId } });
+      setNotice(next.status === 'completed' && entry.status !== 'completed' ? 'Last chapter read. Marked Completed.' :
+      entry.status === 'planned' ? 'One more chapter. Moved to Reading.' : 'One more chapter. Progress saved.');
     } catch (cause) {setError(getErrorMessage(cause));}
   }
   async function saveList() {
