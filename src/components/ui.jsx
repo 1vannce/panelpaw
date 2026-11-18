@@ -3,8 +3,9 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'rea
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { fonts } from '../theme.js';
+import { fonts, THEME_MODES } from '../theme.js';
 import { useThemed } from '../providers/ThemeProvider.jsx';
+
 
 const screentone = require('../../assets/textures/screentone.png');
 
@@ -129,10 +130,20 @@ export function PanelTitle({ title }) {
   return <View style={styles.panelWrap}>
     <View style={styles.panelShadow} />
     <View style={styles.panel}>
-      <Image source={screentone} resizeMode="repeat" style={styles.panelTone} accessible={false} />
+      <Image source={screentone} resizeMode="repeat" style={[styles.panelTone, colors.toneTint && { tintColor: colors.toneTint }]} accessible={false} />
       <View style={styles.panelTitleBox}><Text accessibilityRole="header" style={styles.pageTitle}>{title}</Text></View>
     </View>
   </View>;
+}
+
+const MODE_ICON = { system: 'contrast-outline', light: 'sunny-outline', dark: 'moon-outline' };
+const MODE_LABEL = { system: 'System', light: 'Light', dark: 'Dark' };
+
+// Cycles System -> Light -> Dark. The label names the current mode and the action.
+export function ThemeToggle() {
+  const { mode, setMode } = useThemed(makeStyles);
+  const next = THEME_MODES[(THEME_MODES.indexOf(mode) + 1) % THEME_MODES.length];
+  return <IconButton name={MODE_ICON[mode]} label={`Theme: ${MODE_LABEL[mode]}. Switch to ${MODE_LABEL[next]}`} onPress={() => setMode(next)} />;
 }
 
 export function Notice({ title, message, actionLabel, onAction, tone = 'info' }) {

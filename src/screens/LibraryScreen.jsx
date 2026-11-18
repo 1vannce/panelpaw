@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Button, Chip, Cover, IconButton, Notice, PageHeader, ProgressBar, ScreenEnter, SectionHeading } from "../components/ui.jsx";
+import { Button, Chip, Cover, IconButton, Notice, PageHeader, ProgressBar, ScreenEnter, SectionHeading, ThemeToggle } from "../components/ui.jsx";
 import { fonts } from "../theme.js";
 import { useThemed } from "../providers/ThemeProvider.jsx";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
@@ -90,7 +90,7 @@ export default function LibraryScreen() {
   const refresh = () => {void entries.refetch();void lists.refetch();};
   const header = <View style={styles.header}>
     <PageHeader eyebrow="PanelPaw / library" title="My library" subtitle="Your saved titles, lists, and reading progress."
-    action={<IconButton name="options-outline" label="Manage tracker connection" onPress={() => router.push('/connection')} />} />
+    action={<View style={{ flexDirection: 'row' }}><ThemeToggle /><IconButton name="options-outline" label="Manage tracker connection" onPress={() => router.push('/connection')} /></View>} />
     {!connection.isReady ? <ActivityIndicator color={colors.accent} /> : !connection.isConfigured ?
     <Notice title="Connect your library" message="Connect your tracker to save titles and pick up exactly where you left off." actionLabel="Connect my library" onAction={() => router.push('/connection')} /> :
     <>

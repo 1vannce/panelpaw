@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import { isThemeMode, paletteFor, resolveScheme, THEME_STORAGE_KEY } from '../theme.js';
 
 const Context = createContext(null);
@@ -22,6 +22,12 @@ export function ThemeProvider({ children }) {
     const scheme = resolveScheme(mode, system);
     return { mode, scheme, isDark: scheme === 'dark', colors: paletteFor(scheme), setMode };
   }, [mode, system, setMode]);
+  // Web: keep the page behind the app (overscroll, first paint) and native widgets in step.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    document.documentElement.style.backgroundColor = value.colors.background;
+    document.documentElement.style.colorScheme = value.scheme;
+  }, [value]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 

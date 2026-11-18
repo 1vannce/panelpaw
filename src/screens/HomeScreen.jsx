@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Chip, Cover, IconButton, Notice, PanelTitle, ScreenEnter } from '../components/ui.jsx';
+import { Button, Chip, Cover, IconButton, Notice, PanelTitle, ScreenEnter, ThemeToggle } from '../components/ui.jsx';
 import { useCatalog } from '../hooks/useCatalog.js';
 import { fonts } from '../theme.js';
 import { useThemed } from '../providers/ThemeProvider.jsx';
@@ -99,7 +99,10 @@ export default function HomeScreen() {
                 <Image source={require('../../assets/branding/panelpaw-icon.png')} accessibilityLabel="PanelPaw logo" style={{ width: 38, height: 38 }} />
                 <Text style={styles.wordmark}>PanelPaw</Text>
               </View>
-              <IconButton name="options-outline" label="Configure tracker connection" onPress={() => router.push('/connection')} />
+              <View style={{ flexDirection: 'row' }}>
+                <ThemeToggle />
+                <IconButton name="options-outline" label="Configure tracker connection" onPress={() => router.push('/connection')} />
+              </View>
             </View>
             <View style={styles.intro}>
               <PanelTitle title="Discover" />
