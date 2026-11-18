@@ -1,5 +1,5 @@
 /* Layout: a manga page. Irregular panel grid with hard gutters, type that breaks across panels, one pinned scroll scene.
-   Palette follows the app (black / white / gray) plus one accent, hanko red, used only on hover and the 完 stamp. */
+   Palette follows the app (black / white / gray) plus one accent, hanko red, matching the app: hover and focus, section labels, panel numbers, the progress fill and the 完 stamp. */
 :root {
   --paper: #FFFFFF; --ink: #0B0B0B; --tone: #E4E4E4; --muted: #5E5E5E; --line: #0B0B0B;
   --accent: #D7262E; --on-accent: #FFFFFF;
@@ -13,7 +13,7 @@
   --border: 3px;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --paper: #0B0B0B; --ink: #F3F3F1; --tone: #2A2A2A; --muted: #A6A6A6; --line: #F3F3F1; color-scheme: dark; }
+  :root { --paper: #0B0B0B; --ink: #F3F3F1; --tone: #2A2A2A; --muted: #A6A6A6; --line: #F3F3F1; color-scheme: dark; --accent: #F04A52; --on-accent: #0B0B0B; }
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -24,6 +24,8 @@ a { color: inherit; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .wrap { max-width: 1480px; margin-inline: auto; padding-left: var(--gut); padding-right: var(--gut-r); }
 .label { font: 500 var(--s-label)/1.2 var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+/* Red labels (as in the app): section headings, the chapter total, card meta and panel numbers. Pills and panel captions stay ink. */
+section .label:not(.muted):not(.cap):not(.rail):not(.read-dir), .disc-meta .label.muted { color: var(--accent); }
 .muted { color: var(--muted); }
 h1, h2, h3 { margin: 0; font-family: var(--display); text-wrap: balance; }
 p { margin: 0; }
@@ -129,7 +131,7 @@ p { margin: 0; }
 .count .n { font: 900 clamp(100px, 14vw, 230px)/.8 var(--display); letter-spacing: -.06em; font-variant-numeric: tabular-nums; }
 .count .of { color: var(--muted); }
 .bar { height: 10px; border: 2px solid var(--line); margin-top: 22px; position: relative; overflow: hidden; }
-.bar i { position: absolute; inset: 0; background: var(--ink); transform-origin: left; }
+.bar i { position: absolute; inset: 0; background: var(--accent); transform-origin: left; }
 .rail { list-style: none; padding: 0; margin: 22px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .rail li { border: 2px solid var(--line); padding: 8px 12px; transition: background .25s, color .25s; }
 .rail li.is-on { background: var(--ink); color: var(--paper); }

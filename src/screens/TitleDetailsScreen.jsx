@@ -7,11 +7,13 @@ import { Button, Chip, Cover, IconButton, Notice, ScreenEnter, SectionHeading } 
 import { useTitle } from "../hooks/useCatalog.js";
 import { useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
-import { colors, fonts } from "../theme.js";
+import { fonts } from "../theme.js";
+import { useThemed } from "../providers/ThemeProvider.jsx";
 import { READING_STATUSES, STATUS_LABELS } from "../types.js";
 
 
 export default function TitleDetailsScreen() {
+  const { colors, styles } = useThemed(makeStyles);
   const params = useLocalSearchParams();
   const id = Number(params.id);
   const { width } = useWindowDimensions();
@@ -119,7 +121,7 @@ export default function TitleDetailsScreen() {
                 <SectionHeading title="Synopsis" />
                 <Text numberOfLines={expanded ? undefined : 5} style={styles.synopsis}>{manga.synopsis || 'A synopsis is not available for this title yet.'}</Text>
                 {manga.synopsis.length > 320 && <Pressable accessibilityRole="button" onPress={() => setExpanded(!expanded)} style={styles.readMore}>
-                  <Text style={styles.linkText}>{expanded ? 'Read less' : 'Read more'}</Text><Ionicons name={expanded ? 'chevron-up-outline' : 'chevron-down-outline'} size={16} color={colors.accent} />
+                  <Text style={styles.linkText}>{expanded ? 'Read less' : 'Read more'}</Text><Ionicons name={expanded ? 'chevron-up-outline' : 'chevron-down-outline'} size={16} color={colors.highlight} />
                 </Pressable>}
               </View>
               <View style={styles.trackerCard}>
@@ -176,7 +178,7 @@ export default function TitleDetailsScreen() {
 
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background }, flex: { flex: 1 },
   content: { width: '100%', maxWidth: 740, alignSelf: 'center', paddingHorizontal: 24, paddingBottom: 36 },
   navigation: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, marginHorizontal: -8 },
@@ -187,7 +189,7 @@ const styles = StyleSheet.create({
 
   cover: { paddingRight: 4, paddingBottom: 4 },
   heroType: { alignSelf: 'flex-start', paddingVertical: 4 },
-  heroTypeText: { fontSize: 11, fontFamily: fonts.semibold, color: colors.accent, textTransform: 'uppercase', letterSpacing: 1.1 },
+  heroTypeText: { fontSize: 11, fontFamily: fonts.semibold, color: colors.highlight, textTransform: 'uppercase', letterSpacing: 1.1 },
   titleBlock: { flex: 1, justifyContent: 'center', gap: 10, paddingVertical: 20 },
   title: { color: colors.ink, fontSize: 28, lineHeight: 35, fontFamily: fonts.semibold, letterSpacing: -0.5 },
   originalTitle: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, lineHeight: 20 },
@@ -204,7 +206,7 @@ const styles = StyleSheet.create({
   section: { paddingVertical: 26, gap: 15 },
   synopsis: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 24, color: colors.muted },
   readMore: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, marginTop: -9 },
-  linkText: { fontSize: 13, color: colors.accent, fontFamily: fonts.semibold },
+  linkText: { fontSize: 13, color: colors.highlight, fontFamily: fonts.semibold },
   trackerCard: { backgroundColor: colors.paper, padding: 21, borderWidth: 1, borderColor: colors.border, borderRadius: 6, gap: 17, marginBottom: 16 },
   trackerHeading: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingBottom: 5 },
   trackerIcon: { width: 44, height: 44, backgroundColor: colors.surface, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },

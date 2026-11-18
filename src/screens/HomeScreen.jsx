@@ -1,11 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Chip, Cover, IconButton, Notice, PanelTitle, ScreenEnter } from '../components/ui.jsx';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Button, Chip, Cover, EmptyArt, IconButton, Masthead, Notice, ProgressBar, ScreenEnter, SkeletonCover, Tag, ThemeToggle } from '../components/ui.jsx';
 import { useCatalog } from '../hooks/useCatalog.js';
-import { colors, fonts } from '../theme.js';
+import { useEntries, useTrackerMutations } from '../hooks/useTracker.js';
+import { useConnection } from '../providers/ConnectionProvider.jsx';
+import { getErrorMessage } from '../api/http.js';
+import { continueReading } from '../library.js';
+import { stampThud, tick } from '../haptics.js';
+import { nextChapter } from '../types.js';
+import { fonts } from '../theme.js';
+import { useThemed } from '../providers/ThemeProvider.jsx';
 
 const FORMATS = [
   { value: 'all', label: 'All titles' },
@@ -26,26 +34,79 @@ const GENRES = [
   { value: 'supernatural', label: 'Supernatural' },
 ];
 
+const toneImage = require('../../assets/textures/screentone.png');
+
+// Large "splash panel" for the top title: big cover beside the copy on wide screens.
 function FeaturedTitle({ manga }) {
+  const { colors, styles } = useThemed(makeStyles);
+  const { width } = useWindowDimensions();
+  const wide = width >= 640;
+  const coverW = wide ? 176 : 104;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Explore ${manga.title}`}
-      onPress={() => router.push(`/title/${manga.id}`)}
-      style={({ pressed }) => [styles.feature, pressed && styles.pressed]}>
+      onPress={() => router.push(`/title/${manga.id}`)} style={styles.featureWrap}>
       {({ pressed, hovered }) => <>
-        <Cover uri={manga.imageUrl} title={manga.title} width={72} height={102} lifted={pressed || hovered} />
-        <View style={styles.featureCopy}>
-          <Text style={styles.featureLabel}>POPULAR NOW</Text>
-          <Text numberOfLines={2} style={styles.featureTitle}>{manga.title}</Text>
-          <Text numberOfLines={1} style={styles.meta}>{[manga.type, ...manga.genres.slice(0, 2)].filter(Boolean).join(' · ')}</Text>
-          <Text style={[styles.featureLink, hovered && { color: colors.highlight }]}>View details</Text>
+        <View style={styles.featureShadow} />
+        <View style={[styles.feature, { gap: wide ? 28 : 16 }]}>
+          <Image source={toneImage} resizeMode="repeat" accessible={false} style={[styles.featureTone, colors.toneTint && { tintColor: colors.toneTint }]} />
+          <Cover uri={manga.imageUrl} title={manga.title} width={coverW} height={Math.round(coverW * 1.42)} lifted={pressed || hovered} />
+          <View style={styles.featureCopy}>
+            <Tag label="POPULAR NOW" />
+            <Text numberOfLines={3} style={[styles.featureTitle, wide && { fontSize: 38, lineHeight: 44 }]}>{manga.title}</Text>
+            <Text numberOfLines={1} style={styles.meta}>{[manga.type, ...manga.genres.slice(0, 3)].filter(Boolean).join(' · ')}</Text>
+            <View style={styles.featureCta}>
+              <Text style={[styles.featureLink, hovered && { textDecorationLine: 'underline' }]}>View details</Text>
+              <Ionicons name="arrow-forward-outline" size={17} color={colors.highlight} />
+            </View>
+          </View>
         </View>
-        <Ionicons name="arrow-forward-outline" size={19} color={hovered ? colors.highlight : colors.muted} />
       </>}
     </Pressable>
   );
 }
 
+// Titles you are partway through, with a one-tap +1. Hidden until the library is connected and has some.
+function ContinueRail() {
+  const { colors, styles } = useThemed(makeStyles);
+  const connection = useConnection();
+  const entries = useEntries();
+  const { updateEntry } = useTrackerMutations();
+  const [error, setError] = useState('');
+  if (!connection.isConfigured) return null;
+  if (entries.isError) return <View style={styles.railWrap}><Notice title="Could not load your reading list" message={getErrorMessage(entries.error)} actionLabel="Try again" onAction={() => void entries.refetch()} tone="error" /></View>;
+  const reading = continueReading(entries.data ?? []);
+  if (reading.length === 0) return null;
+  async function plusOne(entry) {
+    setError('');
+    const next = nextChapter(entry);
+    try {
+      await updateEntry.mutateAsync({ entry, changes: { ...next, listId: entry.listId } });
+      if (next.status === 'completed') stampThud();else tick();
+    } catch (cause) { setError(getErrorMessage(cause)); }
+  }
+  return <View style={styles.railWrap}>
+    <View style={styles.railHead}><Tag label="CONTINUE READING" /><Text style={styles.meta}>{reading.length} in progress</Text></View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail}>
+      {reading.map((entry) => <View key={entry.id} style={styles.railCard}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`View ${entry.title}`} onPress={() => router.push(`/title/${entry.mangaId}`)} style={styles.railTop}>
+          {({ pressed, hovered }) => <>
+            <Cover uri={entry.imageUrl} title={entry.title} width={56} height={80} lifted={pressed || hovered} />
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text numberOfLines={2} style={[styles.railTitle, hovered && { color: colors.highlight }]}>{entry.title}</Text>
+              <Text style={styles.meta}>Chapter {entry.progress}{entry.totalChapters !== null ? ` / ${entry.totalChapters}` : ''}</Text>
+            </View>
+          </>}
+        </Pressable>
+        <ProgressBar value={entry.progress} max={entry.totalChapters} />
+        <Button label="+1 chapter" variant="secondary" disabled={updateEntry.isPending || (entry.totalChapters !== null && entry.progress >= entry.totalChapters)} onPress={() => void plusOne(entry)} />
+      </View>)}
+    </ScrollView>
+    {error ? <Notice title="Change not saved" message={error} tone="error" /> : null}
+  </View>;
+}
+
 export default function HomeScreen() {
+  const { colors, styles } = useThemed(makeStyles);
   const { width } = useWindowDimensions();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -53,6 +114,21 @@ export default function HomeScreen() {
   const [genre, setGenre] = useState('');
   const [genresOpen, setGenresOpen] = useState(true);
   const catalog = useCatalog(debouncedQuery, format, genre);
+  const searchRef = useRef(null);
+  const [searchFocused, setSearchFocused] = useState(false);
+  // Web: press "/" anywhere outside a text field to jump to search.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const onKey = (event) => {
+      const target = event.target;
+      const typing = target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+      if (event.key !== '/' || typing || event.metaKey || event.ctrlKey || event.altKey) return;
+      event.preventDefault();
+      searchRef.current?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
   const columns = width >= 1000 ? 5 : width >= 760 ? 4 : width >= 540 ? 3 : 2;
   const gutter = width < 540 ? 20 : 32;
   const gap = width < 540 ? 16 : 24;
@@ -96,15 +172,17 @@ export default function HomeScreen() {
                 <Image source={require('../../assets/branding/panelpaw-icon.png')} accessibilityLabel="PanelPaw logo" style={{ width: 38, height: 38 }} />
                 <Text style={styles.wordmark}>PanelPaw</Text>
               </View>
-              <IconButton name="options-outline" label="Configure tracker connection" onPress={() => router.push('/connection')} />
+              <View style={{ flexDirection: 'row' }}>
+                <ThemeToggle />
+                <IconButton name="options-outline" label="Configure tracker connection" onPress={() => router.push('/connection')} />
+              </View>
             </View>
             <View style={styles.intro}>
-              <PanelTitle title="Discover" />
-              <Text style={styles.subtitle}>Manga and manhwa, ready for your reading list.</Text>
+              <Masthead eyebrow="PanelPaw / discover" title="Discover" subtitle="Manga and manhwa, ready for your reading list." />
             </View>
-            <View style={styles.searchBox}>
+            <View style={[styles.searchBox, searchFocused && { borderColor: colors.highlight }]}>
               <Ionicons name="search-outline" size={20} color={colors.muted} />
-              <TextInput accessibilityLabel="Search manga and manhwa" placeholder="Search by title"
+              <TextInput ref={searchRef} onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} accessibilityLabel="Search manga and manhwa" placeholder={Platform.OS === 'web' ? 'Search by title (press /)' : 'Search by title'}
                 placeholderTextColor={colors.muted} value={query} onChangeText={setQuery} returnKeyType="search"
                 autoCapitalize="none" autoCorrect={false} onSubmitEditing={() => setDebouncedQuery(query.trim())} style={styles.searchInput} />
               {query.length > 0 && <IconButton name="close-outline" label="Clear search" onPress={() => { setQuery(''); setDebouncedQuery(''); }} />}
@@ -133,6 +211,7 @@ export default function HomeScreen() {
                 <Text style={styles.clearText}>Clear filters</Text>
               </Pressable>
             </View>}
+            {!hasFilters && <ContinueRail />}
             {featured && <FeaturedTitle manga={featured} />}
             <View style={styles.catalogHeading}>
               <View style={{ flex: 1, gap: 5 }}>
@@ -146,27 +225,31 @@ export default function HomeScreen() {
             </View>}
           </View>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.delay(Math.min(index, columns * 2) * 45).duration(340)} style={{ width: cardWidth }}>
           <Pressable accessibilityRole="button"
             accessibilityLabel={`${item.title}, ${item.type}${item.score ? `, rated ${item.score.toFixed(1)} out of 10` : ''}. View details`}
             onPress={() => router.push(`/title/${item.id}`)}
-            style={({ pressed }) => [styles.catalogCard, { width: cardWidth }, pressed && styles.pressed]}>
+            style={({ pressed }) => [styles.catalogCard, pressed && styles.pressed]}>
             {({ pressed, hovered }) => <>
               <Cover uri={item.imageUrl} title={item.title} width={cardWidth} height={Math.round(cardWidth * 1.42)} lifted={pressed || hovered} />
               <View style={styles.cardMeta}>
-                <Text style={styles.meta}>{item.type || 'Manga'}</Text>
-                {item.score !== null && <View style={styles.score}><Ionicons name="star-outline" color={colors.muted} size={12} /><Text style={styles.meta}>{item.score.toFixed(1)}</Text></View>}
+                <Text style={styles.cardIndex}>{String(index + (featured ? 2 : 1)).padStart(2, '0')}<Text style={styles.meta}>  {item.type || 'Manga'}</Text></Text>
+                {item.score !== null && <View style={styles.score}><Ionicons name="star" color={colors.highlight} size={12} /><Text style={styles.meta}>{item.score.toFixed(1)}</Text></View>}
               </View>
               <Text numberOfLines={2} style={[styles.cardTitle, hovered && { color: colors.highlight }]}>{item.title}</Text>
               <Text numberOfLines={1} style={styles.cardGenres}>{item.genres.slice(0, 2).join(' · ')}</Text>
             </>}
           </Pressable>
+          </Animated.View>
         )}
         ListEmptyComponent={catalog.isPending ? (
-          <View style={styles.empty}><ActivityIndicator color={colors.accent} /><Text style={styles.subtitle}>Loading titles…</Text></View>
+          <View accessibilityLabel="Loading titles" accessibilityLiveRegion="polite" style={[styles.skeletons, { gap }]}>
+            {Array.from({ length: columns * 2 }, (_, i) => <View key={i} style={{ width: cardWidth, marginBottom: 12 }}><SkeletonCover width={cardWidth} height={Math.round(cardWidth * 1.42)} /></View>)}
+          </View>
         ) : !catalog.isError && !featured ? (
           <View style={styles.empty}>
-            <Ionicons name="search-outline" size={28} color={colors.muted} />
+            <EmptyArt />
             <Text style={styles.sectionTitle}>No titles found</Text>
             <Text style={styles.emptyText}>Try another title, format, or genre.</Text>
             <Button label="Clear filters" variant="secondary" onPress={clearFilters} />
@@ -180,7 +263,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { width: '100%', maxWidth: 1120, alignSelf: 'center', paddingBottom: 24 },
   topbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
@@ -188,24 +271,35 @@ const styles = StyleSheet.create({
   wordmark: { fontSize: 25, fontFamily: fonts.bold, letterSpacing: -0.8, color: colors.ink },
   intro: { paddingTop: 30, paddingBottom: 22, gap: 8 },
   subtitle: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, lineHeight: 22 },
-  searchBox: { minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 6, paddingLeft: 14, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.paper, gap: 10 },
-  searchInput: { fontFamily: fonts.regular, flex: 1, minWidth: 0, paddingVertical: 14, paddingRight: 10, color: colors.ink, fontSize: 16 },
+  searchBox: { minHeight: 52, borderWidth: 2, borderColor: colors.ink, borderRadius: 2, paddingLeft: 14, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.paper, gap: 10 },
+  searchInput: { outlineStyle: 'none', fontFamily: fonts.regular, flex: 1, minWidth: 0, paddingVertical: 14, paddingRight: 10, color: colors.ink, fontSize: 16 },
   filterBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, marginTop: 12, gap: 8, flexWrap: 'wrap' },
   formats: { flexDirection: 'row', gap: 20 },
   formatButton: { minHeight: 48, justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  formatSelected: { borderBottomColor: colors.ink },
+  formatSelected: { borderBottomColor: colors.highlight },
   formatText: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
   formatTextSelected: { fontSize: 13, color: colors.ink, fontFamily: fonts.semibold },
   genreToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48 },
   genres: { gap: 8, paddingVertical: 16, paddingRight: 4 },
   filterSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   clearFilters: { minHeight: 44, justifyContent: 'center' },
-  clearText: { fontFamily: fonts.regular, fontSize: 12, color: colors.accent, textDecorationLine: 'underline' },
-  feature: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
-  featureCopy: { flex: 1, gap: 6 },
-  featureLabel: { fontSize: 10, letterSpacing: 1, fontFamily: fonts.semibold, color: colors.muted },
-  featureTitle: { fontSize: 20, lineHeight: 28, fontFamily: fonts.semibold, color: colors.ink },
-  featureLink: { fontFamily: fonts.regular, fontSize: 12, color: colors.accent, marginTop: 3 },
+  clearText: { fontFamily: fonts.regular, fontSize: 12, color: colors.highlight, textDecorationLine: 'underline' },
+  featureWrap: { marginTop: 22, marginRight: 6, marginBottom: 6, outlineColor: colors.highlight },
+  featureShadow: { position: 'absolute', top: 6, left: 6, right: -6, bottom: -6, backgroundColor: colors.ink },
+  feature: { flexDirection: 'row', alignItems: 'center', padding: 18, borderWidth: 3, borderColor: colors.ink, backgroundColor: colors.paper, overflow: 'hidden' },
+  featureTone: { position: 'absolute', top: 0, right: 0, width: '38%', height: '100%', opacity: 0.4 },
+  featureCopy: { flex: 1, gap: 9, backgroundColor: colors.paper, alignSelf: 'center', paddingVertical: 4, paddingRight: 8 },
+  featureTitle: { fontSize: 22, lineHeight: 28, fontFamily: fonts.bold, color: colors.ink, letterSpacing: -0.6 },
+  featureCta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  featureLink: { fontFamily: fonts.semibold, fontSize: 13, color: colors.highlight },
+  cardIndex: { fontFamily: fonts.bold, fontSize: 12, color: colors.highlight, fontVariant: ['tabular-nums'], letterSpacing: 0.5 },
+  railWrap: { marginTop: 22, gap: 12 },
+  railHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rail: { gap: 14, paddingRight: 8 },
+  railCard: { width: 250, gap: 8, padding: 12, borderWidth: 2, borderColor: colors.ink, backgroundColor: colors.paper },
+  railTop: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  railTitle: { fontFamily: fonts.semibold, fontSize: 14, lineHeight: 19, color: colors.ink },
+  skeletons: { flexDirection: 'row', flexWrap: 'wrap', paddingTop: 4 },
   catalogHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 24, paddingBottom: 20, gap: 12 },
   sectionTitle: { fontSize: 20, fontFamily: fonts.semibold, color: colors.ink },
   catalogCard: { marginBottom: 28 },

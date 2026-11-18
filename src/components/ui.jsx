@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts } from '../theme.js';
+import { fonts, THEME_MODES } from '../theme.js';
+import { useThemed } from '../providers/ThemeProvider.jsx';
+
 
 const screentone = require('../../assets/textures/screentone.png');
+const mascot = require('../../assets/branding/panelpaw-icon.png');
 
 // Hover is web-only; on native only `pressed` is set. Either one turns a control red.
 const isHot = ({ pressed, hovered }) => Boolean(pressed || hovered);
 
 export function Button({ label, onPress, variant = 'primary', disabled = false, loading = false, icon }) {
+  const { colors, styles } = useThemed(makeStyles);
   const light = variant === 'primary' || variant === 'danger';
   const inactive = disabled || loading;
   return (
@@ -23,7 +27,7 @@ export function Button({ label, onPress, variant = 'primary', disabled = false, 
         !inactive && isHot(state) && styles.hot,
         inactive && { opacity: 0.5 }]}>
       {(state) => {
-        const fg = !inactive && isHot(state) ? colors.onHighlight : light ? '#FFF' : colors.ink;
+        const fg = !inactive && isHot(state) ? colors.onHighlight : light ? colors.onInk : colors.ink;
         return <>
           {loading ? <ActivityIndicator size="small" color={fg} /> : icon ? <Ionicons name={icon} size={17} color={fg} /> : null}
           <Text style={[styles.buttonText, { color: fg }]}>{label}</Text>
@@ -34,6 +38,7 @@ export function Button({ label, onPress, variant = 'primary', disabled = false, 
 }
 
 export function IconButton({ name, label, onPress, disabled = false }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
     style={({ pressed }) => [styles.iconButton, disabled && { opacity: 0.4 }, pressed && { backgroundColor: colors.surface }]}>
     {(state) => <Ionicons name={name} size={21} color={!disabled && isHot(state) ? colors.highlight : colors.ink} />}
@@ -41,6 +46,7 @@ export function IconButton({ name, label, onPress, disabled = false }) {
 }
 
 export function Chip({ label, selected = false, onPress }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <Pressable accessibilityRole={onPress ? 'button' : undefined} accessibilityState={{ selected }} aria-pressed={selected}
     onPress={onPress} disabled={!onPress} style={(state) => [styles.chip, selected && styles.chipSelected, onPress && isHot(state) && { borderColor: colors.highlight }]}>
     <Text style={[styles.chipText, selected && { color: colors.paper }]}>{label}</Text>
@@ -51,6 +57,7 @@ export function Chip({ label, selected = false, onPress }) {
 // hovered/pressed state) lifts it off the shadow. `stamp` shows the red 完 (completed) seal,
 // and it lands with a bounce when it appears while the cover is already on screen.
 export function Cover({ uri, title, width = 108, height = 156, lifted = false, stamp = false }) {
+  const { colors, styles } = useThemed(makeStyles);
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [uri]);
   const reduce = useReducedMotion();
@@ -73,6 +80,7 @@ export function Cover({ uri, title, width = 108, height = 156, lifted = false, s
 }
 
 function Stamp({ size, animate }) {
+  const { colors, styles } = useThemed(makeStyles);
   const reduce = useReducedMotion();
   const play = animate && !reduce;
   const scale = useSharedValue(play ? 2.4 : 1);
@@ -91,6 +99,7 @@ function Stamp({ size, animate }) {
 
 // Chapter progress. Animates when the value changes, not on first render.
 export function ProgressBar({ value, max }) {
+  const { colors, styles } = useThemed(makeStyles);
   const pct = max ? Math.min(100, value / max * 100) : 0;
   const width = useSharedValue(pct);
   useEffect(() => { width.value = withTiming(pct, { duration: 450, easing: Easing.out(Easing.cubic) }); }, [pct, width]);
@@ -118,16 +127,95 @@ export function ScreenEnter({ children }) {
 
 // Page title set in a comic panel: heavy ink border, hard shadow, screentone strip.
 export function PanelTitle({ title }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <View style={styles.panelWrap}>
     <View style={styles.panelShadow} />
     <View style={styles.panel}>
-      <Image source={screentone} resizeMode="repeat" style={styles.panelTone} accessible={false} />
+      <Image source={screentone} resizeMode="repeat" style={[styles.panelTone, colors.toneTint && { tintColor: colors.toneTint }]} accessible={false} />
       <View style={styles.panelTitleBox}><Text accessibilityRole="header" style={styles.pageTitle}>{title}</Text></View>
     </View>
   </View>;
 }
 
+const MODE_ICON = { system: 'contrast-outline', light: 'sunny-outline', dark: 'moon-outline' };
+const MODE_LABEL = { system: 'System', light: 'Light', dark: 'Dark' };
+
+// Cycles System -> Light -> Dark. The label names the current mode and the action.
+export function ThemeToggle() {
+  const { mode, setMode } = useThemed(makeStyles);
+  const next = THEME_MODES[(THEME_MODES.indexOf(mode) + 1) % THEME_MODES.length];
+  return <IconButton name={MODE_ICON[mode]} label={`Theme: ${MODE_LABEL[mode]}. Switch to ${MODE_LABEL[next]}`} onPress={() => setMode(next)} />;
+}
+
+// Manga speed lines radiating from a point (cx, cy) inside the parent. Plain Views, so they render
+// the same on web and native. Decorative only.
+export function SpeedLines({ cx = '50%', cy = '50%', count = 30, inner = 36, length = 700, opacity = 0.16 }) {
+  const { colors } = useThemed(makeStyles);
+  return <View pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden
+    style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+    {Array.from({ length: count }, (_, i) => <View key={i} style={{ position: 'absolute', left: cx, top: cy, width: 0, height: 0, transform: [{ rotate: `${(i * 360) / count}deg` }] }}>
+      <View style={{ position: 'absolute', left: -1.5, top: inner + (i % 3) * 14, width: i % 2 ? 2 : 3.5, height: length, backgroundColor: colors.ink, opacity }} />
+    </View>)}
+  </View>;
+}
+
+// Oversized page title in a comic panel, with speed lines behind it. Lines ease in once.
+export function Masthead({ eyebrow, title, subtitle }) {
+  const { styles } = useThemed(makeStyles);
+  const { width } = useWindowDimensions();
+  const size = Math.round(Math.min(112, Math.max(52, Math.min(width, 1120) * 0.1)));
+  const reduce = useReducedMotion();
+  const scale = useSharedValue(reduce ? 1 : 1.14);
+  useEffect(() => { if (!reduce) scale.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.cubic) }); }, [reduce, scale]);
+  const art = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return <View style={styles.panelWrap}>
+    <View style={styles.panelShadow} />
+    <View style={styles.mastheadPanel}>
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, art]}><SpeedLines cx="86%" cy="48%" /></Animated.View>
+      <View style={styles.mastheadBox}>
+        {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+        <Text accessibilityRole="header" style={[styles.mastheadTitle, { fontSize: size, lineHeight: Math.round(size * 1.04), letterSpacing: -size * 0.045 }]}>{title}</Text>
+        {subtitle ? <Text style={styles.mastheadSub}>{subtitle}</Text> : null}
+      </View>
+    </View>
+  </View>;
+}
+
+// Small solid red label, e.g. POPULAR NOW.
+export function Tag({ label }) {
+  const { styles } = useThemed(makeStyles);
+  return <View style={styles.tag}><Text style={styles.tagText}>{label}</Text></View>;
+}
+
+// Empty state art: the cat mascot in a burst of speed lines.
+export function EmptyArt({ size = 150 }) {
+  const { styles } = useThemed(makeStyles);
+  return <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <SpeedLines count={24} inner={size * 0.3} length={size} opacity={0.2} />
+    <View style={styles.emptyArtFrame}><Image source={mascot} accessibilityLabel="PanelPaw cat" style={{ width: size * 0.46, height: size * 0.46 }} /></View>
+  </View>;
+}
+
+// Loading placeholder shaped like a cover. Pulses unless reduce motion is on.
+export function SkeletonCover({ width, height }) {
+  const { colors, styles } = useThemed(makeStyles);
+  const reduce = useReducedMotion();
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    if (reduce) return;
+    pulse.value = withRepeat(withSequence(withTiming(0.55, { duration: 700 }), withTiming(1, { duration: 700 })), -1);
+  }, [reduce, pulse]);
+  const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
+  return <View style={{ width, height }} accessible={false}>
+    <View style={styles.coverShadow} />
+    <Animated.View style={[styles.cover, { width, height, backgroundColor: colors.surface }, style]}>
+      <Image source={screentone} resizeMode="repeat" accessible={false} style={[{ width: '100%', height: '100%', opacity: 0.5 }, colors.toneTint && { tintColor: colors.toneTint }]} />
+    </Animated.View>
+  </View>;
+}
+
 export function Notice({ title, message, actionLabel, onAction, tone = 'info' }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <View accessibilityLiveRegion="polite" style={[styles.notice, tone === 'error' && { borderLeftColor: colors.danger, backgroundColor: colors.surface }]}>
     <Ionicons name={tone === 'error' ? 'alert-circle-outline' : 'information-circle-outline'} size={21} color={tone === 'error' ? colors.danger : colors.accent} />
     <View style={{ flex: 1, gap: 7 }}><Text style={styles.noticeTitle}>{title}</Text><Text style={styles.body}>{message}</Text>
@@ -136,6 +224,7 @@ export function Notice({ title, message, actionLabel, onAction, tone = 'info' })
 }
 
 export function SectionHeading({ title, subtitle, action, onAction }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <View style={styles.sectionRow}><View style={{ flex: 1, gap: 5 }}>
     <Text accessibilityRole="header" style={styles.sectionTitle}>{title}</Text>
     {subtitle ? <Text style={styles.body}>{subtitle}</Text> : null}</View>
@@ -143,6 +232,7 @@ export function SectionHeading({ title, subtitle, action, onAction }) {
 }
 
 export function PageHeader({ eyebrow, title, subtitle, action }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <View style={{ gap: 12 }}>
     {(eyebrow || action) && <View style={styles.pageTop}><Text style={styles.eyebrow}>{eyebrow}</Text>{action}</View>}
     <PanelTitle title={title} />
@@ -152,22 +242,29 @@ export function PageHeader({ eyebrow, title, subtitle, action }) {
 
 const SHADOW = 5;
 
-const styles = StyleSheet.create({
-  button: { minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 2, borderWidth: 2, borderColor: 'transparent', flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
+const makeStyles = (colors) => StyleSheet.create({
+  button: { outlineColor: colors.highlight, minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 2, borderWidth: 2, borderColor: 'transparent', flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
   hot: { backgroundColor: colors.highlight, borderColor: colors.highlight },
   buttonText: { fontSize: 14, lineHeight: 20, fontFamily: fonts.semibold, flexShrink: 1, textAlign: 'center' },
-  iconButton: { minWidth: 44, minHeight: 44, borderRadius: 2, alignItems: 'center', justifyContent: 'center' },
-  chip: { minHeight: 44, borderRadius: 2, paddingHorizontal: 13, paddingVertical: 10, borderWidth: 2, borderColor: colors.border, justifyContent: 'center', backgroundColor: colors.paper },
+  iconButton: { outlineColor: colors.highlight, minWidth: 44, minHeight: 44, borderRadius: 2, alignItems: 'center', justifyContent: 'center' },
+  chip: { outlineColor: colors.highlight, minHeight: 44, borderRadius: 2, paddingHorizontal: 13, paddingVertical: 10, borderWidth: 2, borderColor: colors.border, justifyContent: 'center', backgroundColor: colors.paper },
   chipSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
   chipText: { fontSize: 13, lineHeight: 20, color: colors.ink, fontFamily: fonts.medium },
   coverShadow: { position: 'absolute', top: 4, left: 4, right: -4, bottom: -4, backgroundColor: colors.ink, borderRadius: 2 },
   cover: { borderRadius: 2, borderWidth: 2, borderColor: colors.ink, overflow: 'hidden', backgroundColor: colors.surface },
   coverFallback: { flex: 1, padding: 12, justifyContent: 'center', alignItems: 'center', gap: 12 },
   coverLabel: { color: colors.muted, textAlign: 'center', fontFamily: fonts.medium, fontSize: 12 },
-  stamp: { position: 'absolute', left: '50%', top: '50%', borderColor: colors.highlight, backgroundColor: 'rgba(255,255,255,0.88)', alignItems: 'center', justifyContent: 'center' },
+  stamp: { position: 'absolute', left: '50%', top: '50%', borderColor: colors.highlight, backgroundColor: colors.stampBack, alignItems: 'center', justifyContent: 'center' },
   stampText: { color: colors.highlight, fontWeight: '900', textAlign: 'center' },
   progressTrack: { height: 8, borderWidth: 1.5, borderColor: colors.ink, borderRadius: 1, marginVertical: 3, overflow: 'hidden', backgroundColor: colors.paper },
-  progressFill: { height: '100%', backgroundColor: colors.ink },
+  progressFill: { height: '100%', backgroundColor: colors.highlight },
+  mastheadPanel: { borderWidth: 3, borderColor: colors.ink, backgroundColor: colors.paper, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 18, overflow: 'hidden' },
+  mastheadBox: { alignSelf: 'flex-start', maxWidth: '100%', backgroundColor: colors.paper, paddingRight: 14, paddingBottom: 2, gap: 4 },
+  mastheadTitle: { fontFamily: fonts.bold, color: colors.ink },
+  mastheadSub: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 22, color: colors.muted, marginTop: 4 },
+  tag: { alignSelf: 'flex-start', backgroundColor: colors.highlight, paddingHorizontal: 8, paddingVertical: 3 },
+  tagText: { fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1.2, color: colors.onHighlight },
+  emptyArtFrame: { padding: 10, borderWidth: 3, borderColor: colors.ink, backgroundColor: colors.paper },
   panelWrap: { marginRight: SHADOW, marginBottom: SHADOW },
   panelShadow: { position: 'absolute', top: SHADOW, left: SHADOW, right: -SHADOW, bottom: -SHADOW, backgroundColor: colors.ink },
   panel: { borderWidth: 3, borderColor: colors.ink, backgroundColor: colors.paper, paddingHorizontal: 18, paddingVertical: 14, overflow: 'hidden' },
@@ -179,6 +276,6 @@ const styles = StyleSheet.create({
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   sectionTitle: { color: colors.ink, fontSize: 20, fontFamily: fonts.semibold, letterSpacing: -0.3 },
   pageTop: { minHeight: 50, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 2, borderBottomColor: colors.ink, marginBottom: 6 },
-  eyebrow: { fontSize: 12, fontFamily: fonts.bold, color: colors.muted, letterSpacing: 1.2, textTransform: 'uppercase' },
+  eyebrow: { fontSize: 12, fontFamily: fonts.bold, color: colors.highlight, letterSpacing: 1.2, textTransform: 'uppercase' },
   pageTitle: { fontSize: 34, lineHeight: 40, fontFamily: fonts.bold, letterSpacing: -1, color: colors.ink },
 });

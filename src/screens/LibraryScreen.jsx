@@ -4,20 +4,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Button, Chip, Cover, IconButton, Notice, PageHeader, ProgressBar, ScreenEnter, SectionHeading } from "../components/ui.jsx";
-import { colors, fonts } from "../theme.js";
+import { Button, Chip, Cover, EmptyArt, IconButton, Notice, PageHeader, ProgressBar, ScreenEnter, SectionHeading, ThemeToggle } from "../components/ui.jsx";
+import { fonts } from "../theme.js";
+import { useThemed } from "../providers/ThemeProvider.jsx";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
 import { getErrorMessage } from "../api/http.js";
 import { nextChapter, READING_STATUSES, STATUS_LABELS } from "../types.js";
+import { SORTS, sortEntries } from "../library.js";
+import { stampThud, tick } from "../haptics.js";
 
 export default function LibraryScreen() {
+  const { colors, styles } = useThemed(makeStyles);
   const connection = useConnection();
   const entries = useEntries();
   const lists = useLists();
   const actions = useTrackerMutations();
   const [status, setStatus] = useState('all');
   const [listId, setListId] = useState('all');
+  const [sort, setSort] = useState('recent');
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -35,10 +40,9 @@ export default function LibraryScreen() {
   const allEntries = entries.data ?? [];
   const allLists = lists.data ?? [];
   const selectedList = allLists.find((list) => list.id === listId);
-  const visible = allEntries.filter((entry) => (status === 'all' || entry.status === status) && (
+  const visible = sortEntries(allEntries.filter((entry) => (status === 'all' || entry.status === status) && (
   listId === 'all' || (listId === 'unfiled' ? !entry.listId : entry.listId === listId)) &&
-  entry.title.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim())).
-  sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  entry.title.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim())), sort);
   function openEditor(entry) {
     if (busy) return;
     setEditing(entry);setProgress(String(entry.progress));setEditStatus(entry.status);setEditList(entry.listId);setModalError('');
@@ -57,6 +61,7 @@ export default function LibraryScreen() {
     const next = nextChapter(entry);
     try {
       await actions.updateEntry.mutateAsync({ entry, changes: { ...next, listId: entry.listId } });
+      if (next.status === 'completed' && entry.status !== 'completed') stampThud();else tick();
       setNotice(next.status === 'completed' && entry.status !== 'completed' ? 'Last chapter read. Marked Completed.' :
       entry.status === 'planned' ? 'One more chapter. Moved to Reading.' : 'One more chapter. Progress saved.');
     } catch (cause) {setError(getErrorMessage(cause));}
@@ -88,7 +93,7 @@ export default function LibraryScreen() {
   const refresh = () => {void entries.refetch();void lists.refetch();};
   const header = <View style={styles.header}>
     <PageHeader eyebrow="PanelPaw / library" title="My library" subtitle="Your saved titles, lists, and reading progress."
-    action={<IconButton name="options-outline" label="Manage tracker connection" onPress={() => router.push('/connection')} />} />
+    action={<View style={{ flexDirection: 'row' }}><ThemeToggle /><IconButton name="options-outline" label="Manage tracker connection" onPress={() => router.push('/connection')} /></View>} />
     {!connection.isReady ? <ActivityIndicator color={colors.accent} /> : !connection.isConfigured ?
     <Notice title="Connect your library" message="Connect your tracker to save titles and pick up exactly where you left off." actionLabel="Connect my library" onAction={() => router.push('/connection')} /> :
     <>
@@ -104,6 +109,10 @@ export default function LibraryScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           <Chip label="All titles" selected={status === 'all'} onPress={() => setStatus('all')} />
           {READING_STATUSES.map((value) => <Chip key={value} label={STATUS_LABELS[value]} selected={status === value} onPress={() => setStatus(value)} />)}
+        </ScrollView>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chips, { alignItems: 'center' }]}>
+          <Text style={styles.label}>SORT BY</Text>
+          {SORTS.map((item) => <Chip key={item.value} label={item.label} selected={sort === item.value} onPress={() => setSort(item.value)} />)}
         </ScrollView>
         <SectionHeading title="Reading lists" action="Manage" onAction={() => {setManageLists(true);setModalError('');}} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
@@ -124,7 +133,7 @@ export default function LibraryScreen() {
     refreshControl={connection.isConfigured ? <RefreshControl refreshing={entries.isRefetching || lists.isRefetching} onRefresh={refresh} tintColor={colors.accent} /> : undefined}
     ListEmptyComponent={connection.isConfigured ? entries.isPending ? <ActivityIndicator color={colors.accent} style={{ padding: 36 }} /> : entries.isError ?
     <Notice title="Could not load your library" message={getErrorMessage(entries.error)} tone="error" actionLabel="Try again" onAction={refresh} /> :
-    <View style={styles.empty}><Ionicons name="library-outline" size={40} color={colors.accent} />
+    <View style={styles.empty}><EmptyArt />
           <Text style={styles.emptyTitle}>{allEntries.length ? 'No matching stories' : 'No saved titles yet'}</Text>
           <Text style={styles.body}>{allEntries.length ? 'Try another filter or search.' : 'Discover a manga or manhwa and add it to your library.'}</Text>
           <Button label="Explore titles" variant="secondary" onPress={() => router.push('/')} /></View> : null}
@@ -185,17 +194,17 @@ export default function LibraryScreen() {
     </Modal>
   </SafeAreaView>;
 }
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background }, content: { padding: 20, paddingBottom: 35, width: '100%', maxWidth: 1000, alignSelf: 'center' },
   header: { gap: 22, paddingBottom: 22 }, stats: { borderBottomWidth: 1, borderColor: colors.border, paddingVertical: 20, flexDirection: 'row' },
   stat: { flex: 1, gap: 8, alignItems: 'center' }, statNumber: { fontVariant: ['tabular-nums'], fontSize: 28, fontFamily: fonts.medium, color: colors.accent }, statLabel: { fontSize: 11, letterSpacing: 0.8, color: colors.accent, fontFamily: fonts.bold },
   search: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, minHeight: 52, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: 6, gap: 10 },
   searchInput: { fontFamily: fonts.regular, flex: 1, minHeight: 50, fontSize: 16, color: colors.ink }, chips: { gap: 8 }, wrap: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   entry: { flexDirection: 'row', gap: 16, paddingVertical: 18, borderBottomWidth: 1, borderColor: colors.border },
-  entryBody: { flex: 1, gap: 7 }, format: { color: colors.accent, fontSize: 11, letterSpacing: 0.4, fontFamily: fonts.bold },
+  entryBody: { flex: 1, gap: 7 }, format: { color: colors.highlight, fontSize: 11, letterSpacing: 0.4, fontFamily: fonts.bold },
   title: { fontSize: 16, fontFamily: fonts.bold, color: colors.ink, lineHeight: 22 }, body: { fontFamily: fonts.regular, color: colors.muted, fontSize: 14, lineHeight: 22 },
   entryActions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 0 }, empty: { paddingVertical: 34, gap: 16, alignItems: 'center' }, emptyTitle: { fontSize: 24, color: colors.ink, fontFamily: fonts.bold },
-  success: { fontFamily: fonts.regular, color: colors.accent, fontSize: 13 }, scrim: { flex: 1, backgroundColor: '#00000066', justifyContent: 'center', padding: 20 },
+  success: { fontFamily: fonts.regular, color: colors.accent, fontSize: 13 }, scrim: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', padding: 20 },
   modalCard: { backgroundColor: colors.background, borderRadius: 8, maxHeight: '90%', width: '100%', maxWidth: 540, alignSelf: 'center', overflow: 'hidden' },
   modalContent: { padding: 24, gap: 20 }, label: { fontSize: 11, color: colors.muted, fontFamily: fonts.semibold, letterSpacing: 0.6 },
   input: { fontFamily: fonts.regular, minHeight: 50, padding: 14, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: 6, color: colors.ink, fontSize: 16 },
