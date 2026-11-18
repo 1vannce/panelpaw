@@ -37,7 +37,7 @@ Stop the running Expo server before `npm ci` on Windows; it locks native files. 
 - Never import from `src/` or the root `node_modules`; copy brand assets instead. Do not use npm workspaces.
 - Static sample data only (`site/lib/site.js`); status labels match `src/types.js`. No real Kitsu covers in marketing art.
 - Motion: GSAP + Lenis in `site/components/Motion.jsx`. Every effect respects `prefers-reduced-motion`; markup must read fine without JS. No WebGL.
-- Palette: the app's black/white/gray plus one accent (`--accent`, hanko red) for hover and the 完 stamp only. The app now uses red more widely (see Conventions); the landing page has not been updated to match.
+- Palette: the app's black/white/gray plus one accent (`--accent`, hanko red), used as in the app: hover/focus, section labels, panel numbers, the progress fill and the 完 stamp. Status pills and panel captions stay ink. Dark mode uses a lighter red (`#F04A52`) for contrast.
 - Returning users: `site/app/layout.jsx` redirects `/` to the app when the browser has the `panelpaw:used` flag (set by the app after the first saved title). `/?landing` or any `#hash` keeps the landing page. Keep it in step with `src/usage.js`.
 - Vercel: one project (`panelpaw`). `vercel.json` rewrites `/app/*` to the app and redirects old app routes (`/library`, `/connection`, `/title/:id`) under `/app`.
 
