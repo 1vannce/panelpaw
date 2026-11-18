@@ -3,7 +3,8 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'rea
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts } from '../theme.js';
+import { fonts } from '../theme.js';
+import { useThemed } from '../providers/ThemeProvider.jsx';
 
 const screentone = require('../../assets/textures/screentone.png');
 
@@ -11,6 +12,7 @@ const screentone = require('../../assets/textures/screentone.png');
 const isHot = ({ pressed, hovered }) => Boolean(pressed || hovered);
 
 export function Button({ label, onPress, variant = 'primary', disabled = false, loading = false, icon }) {
+  const { colors, styles } = useThemed(makeStyles);
   const light = variant === 'primary' || variant === 'danger';
   const inactive = disabled || loading;
   return (
@@ -23,7 +25,7 @@ export function Button({ label, onPress, variant = 'primary', disabled = false, 
         !inactive && isHot(state) && styles.hot,
         inactive && { opacity: 0.5 }]}>
       {(state) => {
-        const fg = !inactive && isHot(state) ? colors.onHighlight : light ? '#FFF' : colors.ink;
+        const fg = !inactive && isHot(state) ? colors.onHighlight : light ? colors.onInk : colors.ink;
         return <>
           {loading ? <ActivityIndicator size="small" color={fg} /> : icon ? <Ionicons name={icon} size={17} color={fg} /> : null}
           <Text style={[styles.buttonText, { color: fg }]}>{label}</Text>
@@ -34,6 +36,7 @@ export function Button({ label, onPress, variant = 'primary', disabled = false, 
 }
 
 export function IconButton({ name, label, onPress, disabled = false }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
     style={({ pressed }) => [styles.iconButton, disabled && { opacity: 0.4 }, pressed && { backgroundColor: colors.surface }]}>
     {(state) => <Ionicons name={name} size={21} color={!disabled && isHot(state) ? colors.highlight : colors.ink} />}
@@ -41,6 +44,7 @@ export function IconButton({ name, label, onPress, disabled = false }) {
 }
 
 export function Chip({ label, selected = false, onPress }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <Pressable accessibilityRole={onPress ? 'button' : undefined} accessibilityState={{ selected }} aria-pressed={selected}
     onPress={onPress} disabled={!onPress} style={(state) => [styles.chip, selected && styles.chipSelected, onPress && isHot(state) && { borderColor: colors.highlight }]}>
     <Text style={[styles.chipText, selected && { color: colors.paper }]}>{label}</Text>
@@ -51,6 +55,7 @@ export function Chip({ label, selected = false, onPress }) {
 // hovered/pressed state) lifts it off the shadow. `stamp` shows the red 完 (completed) seal,
 // and it lands with a bounce when it appears while the cover is already on screen.
 export function Cover({ uri, title, width = 108, height = 156, lifted = false, stamp = false }) {
+  const { colors, styles } = useThemed(makeStyles);
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [uri]);
   const reduce = useReducedMotion();
@@ -73,6 +78,7 @@ export function Cover({ uri, title, width = 108, height = 156, lifted = false, s
 }
 
 function Stamp({ size, animate }) {
+  const { colors, styles } = useThemed(makeStyles);
   const reduce = useReducedMotion();
   const play = animate && !reduce;
   const scale = useSharedValue(play ? 2.4 : 1);
@@ -91,6 +97,7 @@ function Stamp({ size, animate }) {
 
 // Chapter progress. Animates when the value changes, not on first render.
 export function ProgressBar({ value, max }) {
+  const { colors, styles } = useThemed(makeStyles);
   const pct = max ? Math.min(100, value / max * 100) : 0;
   const width = useSharedValue(pct);
   useEffect(() => { width.value = withTiming(pct, { duration: 450, easing: Easing.out(Easing.cubic) }); }, [pct, width]);
@@ -118,6 +125,7 @@ export function ScreenEnter({ children }) {
 
 // Page title set in a comic panel: heavy ink border, hard shadow, screentone strip.
 export function PanelTitle({ title }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <View style={styles.panelWrap}>
     <View style={styles.panelShadow} />
     <View style={styles.panel}>
@@ -128,6 +136,7 @@ export function PanelTitle({ title }) {
 }
 
 export function Notice({ title, message, actionLabel, onAction, tone = 'info' }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <View accessibilityLiveRegion="polite" style={[styles.notice, tone === 'error' && { borderLeftColor: colors.danger, backgroundColor: colors.surface }]}>
     <Ionicons name={tone === 'error' ? 'alert-circle-outline' : 'information-circle-outline'} size={21} color={tone === 'error' ? colors.danger : colors.accent} />
     <View style={{ flex: 1, gap: 7 }}><Text style={styles.noticeTitle}>{title}</Text><Text style={styles.body}>{message}</Text>
@@ -136,6 +145,7 @@ export function Notice({ title, message, actionLabel, onAction, tone = 'info' })
 }
 
 export function SectionHeading({ title, subtitle, action, onAction }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <View style={styles.sectionRow}><View style={{ flex: 1, gap: 5 }}>
     <Text accessibilityRole="header" style={styles.sectionTitle}>{title}</Text>
     {subtitle ? <Text style={styles.body}>{subtitle}</Text> : null}</View>
@@ -143,6 +153,7 @@ export function SectionHeading({ title, subtitle, action, onAction }) {
 }
 
 export function PageHeader({ eyebrow, title, subtitle, action }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <View style={{ gap: 12 }}>
     {(eyebrow || action) && <View style={styles.pageTop}><Text style={styles.eyebrow}>{eyebrow}</Text>{action}</View>}
     <PanelTitle title={title} />
@@ -152,7 +163,7 @@ export function PageHeader({ eyebrow, title, subtitle, action }) {
 
 const SHADOW = 5;
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   button: { minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 2, borderWidth: 2, borderColor: 'transparent', flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
   hot: { backgroundColor: colors.highlight, borderColor: colors.highlight },
   buttonText: { fontSize: 14, lineHeight: 20, fontFamily: fonts.semibold, flexShrink: 1, textAlign: 'center' },
@@ -164,7 +175,7 @@ const styles = StyleSheet.create({
   cover: { borderRadius: 2, borderWidth: 2, borderColor: colors.ink, overflow: 'hidden', backgroundColor: colors.surface },
   coverFallback: { flex: 1, padding: 12, justifyContent: 'center', alignItems: 'center', gap: 12 },
   coverLabel: { color: colors.muted, textAlign: 'center', fontFamily: fonts.medium, fontSize: 12 },
-  stamp: { position: 'absolute', left: '50%', top: '50%', borderColor: colors.highlight, backgroundColor: 'rgba(255,255,255,0.88)', alignItems: 'center', justifyContent: 'center' },
+  stamp: { position: 'absolute', left: '50%', top: '50%', borderColor: colors.highlight, backgroundColor: colors.stampBack, alignItems: 'center', justifyContent: 'center' },
   stampText: { color: colors.highlight, fontWeight: '900', textAlign: 'center' },
   progressTrack: { height: 8, borderWidth: 1.5, borderColor: colors.ink, borderRadius: 1, marginVertical: 3, overflow: 'hidden', backgroundColor: colors.paper },
   progressFill: { height: '100%', backgroundColor: colors.ink },

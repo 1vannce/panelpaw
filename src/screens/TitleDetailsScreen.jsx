@@ -7,11 +7,13 @@ import { Button, Chip, Cover, IconButton, Notice, ScreenEnter, SectionHeading } 
 import { useTitle } from "../hooks/useCatalog.js";
 import { useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
-import { colors, fonts } from "../theme.js";
+import { fonts } from "../theme.js";
+import { useThemed } from "../providers/ThemeProvider.jsx";
 import { READING_STATUSES, STATUS_LABELS } from "../types.js";
 
 
 export default function TitleDetailsScreen() {
+  const { colors, styles } = useThemed(makeStyles);
   const params = useLocalSearchParams();
   const id = Number(params.id);
   const { width } = useWindowDimensions();
@@ -176,7 +178,7 @@ export default function TitleDetailsScreen() {
 
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background }, flex: { flex: 1 },
   content: { width: '100%', maxWidth: 740, alignSelf: 'center', paddingHorizontal: 24, paddingBottom: 36 },
   navigation: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, marginHorizontal: -8 },

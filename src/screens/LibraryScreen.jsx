@@ -5,13 +5,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Button, Chip, Cover, IconButton, Notice, PageHeader, ProgressBar, ScreenEnter, SectionHeading } from "../components/ui.jsx";
-import { colors, fonts } from "../theme.js";
+import { fonts } from "../theme.js";
+import { useThemed } from "../providers/ThemeProvider.jsx";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
 import { getErrorMessage } from "../api/http.js";
 import { nextChapter, READING_STATUSES, STATUS_LABELS } from "../types.js";
 
 export default function LibraryScreen() {
+  const { colors, styles } = useThemed(makeStyles);
   const connection = useConnection();
   const entries = useEntries();
   const lists = useLists();
@@ -185,7 +187,7 @@ export default function LibraryScreen() {
     </Modal>
   </SafeAreaView>;
 }
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background }, content: { padding: 20, paddingBottom: 35, width: '100%', maxWidth: 1000, alignSelf: 'center' },
   header: { gap: 22, paddingBottom: 22 }, stats: { borderBottomWidth: 1, borderColor: colors.border, paddingVertical: 20, flexDirection: 'row' },
   stat: { flex: 1, gap: 8, alignItems: 'center' }, statNumber: { fontVariant: ['tabular-nums'], fontSize: 28, fontFamily: fonts.medium, color: colors.accent }, statLabel: { fontSize: 11, letterSpacing: 0.8, color: colors.accent, fontFamily: fonts.bold },
@@ -195,7 +197,7 @@ const styles = StyleSheet.create({
   entryBody: { flex: 1, gap: 7 }, format: { color: colors.accent, fontSize: 11, letterSpacing: 0.4, fontFamily: fonts.bold },
   title: { fontSize: 16, fontFamily: fonts.bold, color: colors.ink, lineHeight: 22 }, body: { fontFamily: fonts.regular, color: colors.muted, fontSize: 14, lineHeight: 22 },
   entryActions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 0 }, empty: { paddingVertical: 34, gap: 16, alignItems: 'center' }, emptyTitle: { fontSize: 24, color: colors.ink, fontFamily: fonts.bold },
-  success: { fontFamily: fonts.regular, color: colors.accent, fontSize: 13 }, scrim: { flex: 1, backgroundColor: '#00000066', justifyContent: 'center', padding: 20 },
+  success: { fontFamily: fonts.regular, color: colors.accent, fontSize: 13 }, scrim: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', padding: 20 },
   modalCard: { backgroundColor: colors.background, borderRadius: 8, maxHeight: '90%', width: '100%', maxWidth: 540, alignSelf: 'center', overflow: 'hidden' },
   modalContent: { padding: 24, gap: 20 }, label: { fontSize: 11, color: colors.muted, fontFamily: fonts.semibold, letterSpacing: 0.6 },
   input: { fontFamily: fonts.regular, minHeight: 50, padding: 14, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: 6, color: colors.ink, fontSize: 16 },

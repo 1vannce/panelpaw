@@ -4,8 +4,12 @@ import { useFonts } from 'expo-font';
 import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ConnectionProvider } from "./ConnectionProvider.jsx";
-import { colors } from '../theme.js';
+import { ThemeProvider, useTheme } from './ThemeProvider.jsx';
 export function AppProviders({ children }) {
+  return <ThemeProvider><Providers>{children}</Providers></ThemeProvider>;
+}
+function Providers({ children }) {
+  const { colors } = useTheme();
   const [fontsLoaded, fontError] = useFonts({
     'Geist-Regular': require('../../assets/fonts/Geist-Regular.ttf'),
     'Geist-Medium': require('../../assets/fonts/Geist-Medium.ttf'),

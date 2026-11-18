@@ -5,7 +5,8 @@ import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Chip, Cover, IconButton, Notice, PanelTitle, ScreenEnter } from '../components/ui.jsx';
 import { useCatalog } from '../hooks/useCatalog.js';
-import { colors, fonts } from '../theme.js';
+import { fonts } from '../theme.js';
+import { useThemed } from '../providers/ThemeProvider.jsx';
 
 const FORMATS = [
   { value: 'all', label: 'All titles' },
@@ -27,6 +28,7 @@ const GENRES = [
 ];
 
 function FeaturedTitle({ manga }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Explore ${manga.title}`}
       onPress={() => router.push(`/title/${manga.id}`)}
@@ -46,6 +48,7 @@ function FeaturedTitle({ manga }) {
 }
 
 export default function HomeScreen() {
+  const { colors, styles } = useThemed(makeStyles);
   const { width } = useWindowDimensions();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -180,7 +183,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { width: '100%', maxWidth: 1120, alignSelf: 'center', paddingBottom: 24 },
   topbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },

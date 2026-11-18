@@ -8,9 +8,11 @@ import { getErrorMessage } from "../api/http.js";
 import { isLegacyDemoUrl, normalizeBaseUrl } from "../config.js";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { Button, IconButton, Notice, PageHeader, ScreenEnter } from "../components/ui.jsx";
-import { colors, fonts } from "../theme.js";
+import { fonts } from "../theme.js";
+import { useThemed } from "../providers/ThemeProvider.jsx";
 
 export default function ConnectionScreen() {
+  const { colors, styles } = useThemed(makeStyles);
   const connection = useConnection();
   const [value, setValue] = useState(connection.baseUrl);
   const [edited, setEdited] = useState(false);
@@ -67,7 +69,7 @@ export default function ConnectionScreen() {
     </ScrollView></KeyboardAvoidingView>
   </ScreenEnter></SafeAreaView>;
 }
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background }, content: { padding: 24, gap: 26, width: '100%', maxWidth: 680, alignSelf: 'center', paddingBottom: 50 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, brand: { fontSize: 13, fontFamily: fonts.medium, color: colors.muted },
   card: { backgroundColor: colors.paper, padding: 22, borderRadius: 6, borderWidth: 1, borderColor: colors.border, gap: 16 },
