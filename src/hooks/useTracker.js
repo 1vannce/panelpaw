@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createTrackerApi } from "../api/tracker.js";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
+import { markAppUsed } from "../usage.js";
 
 function useTrackerApi() {
   const connection = useConnection();
@@ -42,7 +43,7 @@ export function useTrackerMutations() {
   const refreshAll = async () => {await Promise.all([refreshEntries(), refreshLists()]);};
 
   // Invalidate after failures too: a timeout or interrupted multi-step delete may have committed remotely.
-  const addEntry = useMutation({ mutationFn: api.addEntry, onSettled: refreshEntries, retry: false });
+  const addEntry = useMutation({ mutationFn: api.addEntry, onSuccess: () => { markAppUsed(); }, onSettled: refreshEntries, retry: false });
   const updateEntry = useMutation({ mutationFn: api.updateEntry, onSettled: refreshEntries, retry: false });
   const removeEntry = useMutation({ mutationFn: api.removeEntry, onSettled: refreshEntries, retry: false });
   const addList = useMutation({ mutationFn: api.addList, onSettled: refreshLists, retry: false });

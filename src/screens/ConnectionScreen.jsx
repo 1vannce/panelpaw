@@ -6,10 +6,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { createTrackerApi } from "../api/tracker.js";
 import { getErrorMessage } from "../api/http.js";
 import { isLegacyDemoUrl, normalizeBaseUrl } from "../config.js";
+import { LANDING_PARAM } from "../usage.js";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
-import { Button, IconButton, Notice, PageHeader, ScreenEnter } from "../components/ui.jsx";
+import { Button, IconButton, Notice, PageHeader, ScreenEnter, ThemeToggle } from "../components/ui.jsx";
 import { fonts } from "../theme.js";
 import { useThemed } from "../providers/ThemeProvider.jsx";
+
+// Only the deployed web app (served under /app) has a landing page to go back to.
+const onDeployedWeb = () => Platform.OS === 'web' && typeof window !== 'undefined' && /^\/app(\/|$)/.test(window.location.pathname);
 
 export default function ConnectionScreen() {
   const { colors, styles } = useThemed(makeStyles);
@@ -40,7 +44,7 @@ export default function ConnectionScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.top}><IconButton name="arrow-back" label="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace('/')} />
-        <Text style={styles.brand}>PanelPaw / settings</Text><Ionicons name="cloud-outline" size={23} color={colors.accent} /></View>
+        <Text style={styles.brand}>PanelPaw / settings</Text><ThemeToggle /></View>
       <PageHeader title="Tracker connection" subtitle="Discover titles freely. Connect a dedicated tracker endpoint to keep your reading progress across sessions." />
       <View style={styles.card}>
         <Text style={styles.heading}>Connection settings</Text>
@@ -65,6 +69,7 @@ export default function ConnectionScreen() {
         <Text style={styles.body}>Create an account-owned MockAPI project with entries and lists resources, then copy its base URL above. The field setup and migration steps are in docs/API_SETUP.md. Changing the connection does not transfer your library.</Text>
         <Button label="Open MockAPI" variant="secondary" icon="open-outline" onPress={() => void Linking.openURL('https://mockapi.io/')} />
       </View>
+      {onDeployedWeb() ? <Button label="About PanelPaw" variant="ghost" icon="arrow-back-outline" onPress={() => window.location.assign(`/?${LANDING_PARAM}`)} /> : null}
       <Text style={styles.footnote}>Public mock services are for demos. Anyone with the endpoint may access or edit its data. Use sample reading data and a dedicated endpoint; never enter secret API keys here.</Text>
     </ScrollView></KeyboardAvoidingView>
   </ScreenEnter></SafeAreaView>;
