@@ -3,7 +3,8 @@ import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Modal, Pre
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Button, Chip, Cover, IconButton, Notice, PageHeader, SectionHeading } from "../components/ui.jsx";
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Button, Chip, Cover, IconButton, Notice, PageHeader, ProgressBar, ScreenEnter, SectionHeading } from "../components/ui.jsx";
 import { colors, fonts } from "../theme.js";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
@@ -118,7 +119,7 @@ export default function LibraryScreen() {
   </View>;
 
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
-    <FlatList data={connection.isConfigured ? visible : []} keyExtractor={(item) => item.id}
+    <ScreenEnter><FlatList data={connection.isConfigured ? visible : []} keyExtractor={(item) => item.id}
     contentContainerStyle={styles.content} ListHeaderComponent={header} ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
     refreshControl={connection.isConfigured ? <RefreshControl refreshing={entries.isRefetching || lists.isRefetching} onRefresh={refresh} tintColor={colors.accent} /> : undefined}
     ListEmptyComponent={connection.isConfigured ? entries.isPending ? <ActivityIndicator color={colors.accent} style={{ padding: 36 }} /> : entries.isError ?
@@ -127,22 +128,21 @@ export default function LibraryScreen() {
           <Text style={styles.emptyTitle}>{allEntries.length ? 'No matching stories' : 'No saved titles yet'}</Text>
           <Text style={styles.body}>{allEntries.length ? 'Try another filter or search.' : 'Discover a manga or manhwa and add it to your library.'}</Text>
           <Button label="Explore titles" variant="secondary" onPress={() => router.push('/')} /></View> : null}
-    renderItem={({ item }) => <View style={styles.entry}>
+    renderItem={({ item, index }) => <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 45).duration(320)} style={styles.entry}>
         <Pressable accessibilityRole="button" accessibilityLabel={'View ' + item.title} onPress={() => router.push('/title/' + item.mangaId)}>
-          <Cover uri={item.imageUrl} title={item.title} width={80} height={118} /></Pressable>
+          {({ pressed, hovered }) => <Cover uri={item.imageUrl} title={item.title} width={80} height={118} lifted={pressed || hovered} stamp={item.status === 'completed'} />}</Pressable>
         <View style={styles.entryBody}>
           <Text style={styles.format}>{item.format.toUpperCase()} · {STATUS_LABELS[item.status]}</Text>
           <Pressable accessibilityRole="button" onPress={() => router.push('/title/' + item.mangaId)}><Text numberOfLines={2} style={styles.title}>{item.title}</Text></Pressable>
           <Text style={styles.body}>Chapter {item.progress}{item.totalChapters !== null ? ' / ' + item.totalChapters : ' · ongoing length'}</Text>
-          <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, ...(item.totalChapters !== null ? { max: item.totalChapters } : {}), now: item.progress }}
-        style={styles.progressTrack}><View style={[styles.progressFill, { width: item.totalChapters ? Math.min(100, item.progress / item.totalChapters * 100) + '%' : '0%' }]} /></View>
+          <ProgressBar value={item.progress} max={item.totalChapters} />
           <View style={styles.entryActions}>
             <Button label="+1 chapter" variant="secondary" disabled={busy || item.totalChapters !== null && item.progress >= item.totalChapters} onPress={() => void increment(item)} />
             <IconButton name="create-outline" disabled={busy} label={'Edit ' + item.title} onPress={() => openEditor(item)} />
             <IconButton name="trash-outline" disabled={busy} label={'Remove ' + item.title} onPress={() => {setConfirmation({ kind: 'entry', id: item.id, title: item.title });setModalError('');}} />
           </View>
         </View>
-      </View>} />
+      </Animated.View>} /></ScreenEnter>
     <Modal visible={Boolean(editing)} transparent animationType="fade" onRequestClose={() => {if (!busy) setEditing(null);}}>
       <KeyboardAvoidingView style={styles.scrim} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><SafeAreaView style={styles.modalCard}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalContent}>
         <SectionHeading title="Edit progress" action="Close" onAction={() => {if (!busy) setEditing(null);}} />
@@ -194,8 +194,7 @@ const styles = StyleSheet.create({
   entry: { flexDirection: 'row', gap: 16, paddingVertical: 18, borderBottomWidth: 1, borderColor: colors.border },
   entryBody: { flex: 1, gap: 7 }, format: { color: colors.accent, fontSize: 11, letterSpacing: 0.4, fontFamily: fonts.bold },
   title: { fontSize: 16, fontFamily: fonts.bold, color: colors.ink, lineHeight: 22 }, body: { fontFamily: fonts.regular, color: colors.muted, fontSize: 14, lineHeight: 22 },
-  entryActions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 0 }, progressTrack: { height: 4, backgroundColor: colors.surface, borderRadius: 4, marginVertical: 3 },
-  progressFill: { height: 4, backgroundColor: colors.accent, borderRadius: 4 }, empty: { paddingVertical: 34, gap: 16, alignItems: 'center' }, emptyTitle: { fontSize: 24, color: colors.ink, fontFamily: fonts.bold },
+  entryActions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 0 }, empty: { paddingVertical: 34, gap: 16, alignItems: 'center' }, emptyTitle: { fontSize: 24, color: colors.ink, fontFamily: fonts.bold },
   success: { fontFamily: fonts.regular, color: colors.accent, fontSize: 13 }, scrim: { flex: 1, backgroundColor: '#00000066', justifyContent: 'center', padding: 20 },
   modalCard: { backgroundColor: colors.background, borderRadius: 8, maxHeight: '90%', width: '100%', maxWidth: 540, alignSelf: 'center', overflow: 'hidden' },
   modalContent: { padding: 24, gap: 20 }, label: { fontSize: 11, color: colors.muted, fontFamily: fonts.semibold, letterSpacing: 0.6 },

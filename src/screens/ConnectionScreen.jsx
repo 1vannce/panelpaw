@@ -7,7 +7,7 @@ import { createTrackerApi } from "../api/tracker.js";
 import { getErrorMessage } from "../api/http.js";
 import { isLegacyDemoUrl, normalizeBaseUrl } from "../config.js";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
-import { Button, IconButton, Notice, PageHeader } from "../components/ui.jsx";
+import { Button, IconButton, Notice, PageHeader, ScreenEnter } from "../components/ui.jsx";
 import { colors, fonts } from "../theme.js";
 
 export default function ConnectionScreen() {
@@ -34,7 +34,7 @@ export default function ConnectionScreen() {
     try {await connection.setBaseUrl('');setValue('');setSuccess('Disconnected. Your saved titles remain on the service.');}
     catch (cause) {setError(getErrorMessage(cause));} finally {setBusy(false);}
   }
-  return <SafeAreaView style={styles.safe}>
+  return <SafeAreaView style={styles.safe}><ScreenEnter>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.top}><IconButton name="arrow-back" label="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace('/')} />
@@ -65,7 +65,7 @@ export default function ConnectionScreen() {
       </View>
       <Text style={styles.footnote}>Public mock services are for demos. Anyone with the endpoint may access or edit its data. Use sample reading data and a dedicated endpoint; never enter secret API keys here.</Text>
     </ScrollView></KeyboardAvoidingView>
-  </SafeAreaView>;
+  </ScreenEnter></SafeAreaView>;
 }
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background }, content: { padding: 24, gap: 26, width: '100%', maxWidth: 680, alignSelf: 'center', paddingBottom: 50 },
