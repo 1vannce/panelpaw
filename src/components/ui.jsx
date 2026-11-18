@@ -175,11 +175,11 @@ export function PageHeader({ eyebrow, title, subtitle, action }) {
 const SHADOW = 5;
 
 const makeStyles = (colors) => StyleSheet.create({
-  button: { minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 2, borderWidth: 2, borderColor: 'transparent', flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
+  button: { outlineColor: colors.highlight, minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 2, borderWidth: 2, borderColor: 'transparent', flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
   hot: { backgroundColor: colors.highlight, borderColor: colors.highlight },
   buttonText: { fontSize: 14, lineHeight: 20, fontFamily: fonts.semibold, flexShrink: 1, textAlign: 'center' },
-  iconButton: { minWidth: 44, minHeight: 44, borderRadius: 2, alignItems: 'center', justifyContent: 'center' },
-  chip: { minHeight: 44, borderRadius: 2, paddingHorizontal: 13, paddingVertical: 10, borderWidth: 2, borderColor: colors.border, justifyContent: 'center', backgroundColor: colors.paper },
+  iconButton: { outlineColor: colors.highlight, minWidth: 44, minHeight: 44, borderRadius: 2, alignItems: 'center', justifyContent: 'center' },
+  chip: { outlineColor: colors.highlight, minHeight: 44, borderRadius: 2, paddingHorizontal: 13, paddingVertical: 10, borderWidth: 2, borderColor: colors.border, justifyContent: 'center', backgroundColor: colors.paper },
   chipSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
   chipText: { fontSize: 13, lineHeight: 20, color: colors.ink, fontFamily: fonts.medium },
   coverShadow: { position: 'absolute', top: 4, left: 4, right: -4, bottom: -4, backgroundColor: colors.ink, borderRadius: 2 },
@@ -189,7 +189,7 @@ const makeStyles = (colors) => StyleSheet.create({
   stamp: { position: 'absolute', left: '50%', top: '50%', borderColor: colors.highlight, backgroundColor: colors.stampBack, alignItems: 'center', justifyContent: 'center' },
   stampText: { color: colors.highlight, fontWeight: '900', textAlign: 'center' },
   progressTrack: { height: 8, borderWidth: 1.5, borderColor: colors.ink, borderRadius: 1, marginVertical: 3, overflow: 'hidden', backgroundColor: colors.paper },
-  progressFill: { height: '100%', backgroundColor: colors.ink },
+  progressFill: { height: '100%', backgroundColor: colors.highlight },
   panelWrap: { marginRight: SHADOW, marginBottom: SHADOW },
   panelShadow: { position: 'absolute', top: SHADOW, left: SHADOW, right: -SHADOW, bottom: -SHADOW, backgroundColor: colors.ink },
   panel: { borderWidth: 3, borderColor: colors.ink, backgroundColor: colors.paper, paddingHorizontal: 18, paddingVertical: 14, overflow: 'hidden' },
@@ -201,6 +201,6 @@ const makeStyles = (colors) => StyleSheet.create({
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   sectionTitle: { color: colors.ink, fontSize: 20, fontFamily: fonts.semibold, letterSpacing: -0.3 },
   pageTop: { minHeight: 50, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 2, borderBottomColor: colors.ink, marginBottom: 6 },
-  eyebrow: { fontSize: 12, fontFamily: fonts.bold, color: colors.muted, letterSpacing: 1.2, textTransform: 'uppercase' },
+  eyebrow: { fontSize: 12, fontFamily: fonts.bold, color: colors.highlight, letterSpacing: 1.2, textTransform: 'uppercase' },
   pageTitle: { fontSize: 34, lineHeight: 40, fontFamily: fonts.bold, letterSpacing: -1, color: colors.ink },
 });

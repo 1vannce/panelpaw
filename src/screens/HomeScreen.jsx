@@ -39,7 +39,7 @@ function FeaturedTitle({ manga }) {
           <Text style={styles.featureLabel}>POPULAR NOW</Text>
           <Text numberOfLines={2} style={styles.featureTitle}>{manga.title}</Text>
           <Text numberOfLines={1} style={styles.meta}>{[manga.type, ...manga.genres.slice(0, 2)].filter(Boolean).join(' · ')}</Text>
-          <Text style={[styles.featureLink, hovered && { color: colors.highlight }]}>View details</Text>
+          <Text style={styles.featureLink}>View details</Text>
         </View>
         <Ionicons name="arrow-forward-outline" size={19} color={hovered ? colors.highlight : colors.muted} />
       </>}
@@ -199,19 +199,19 @@ const makeStyles = (colors) => StyleSheet.create({
   filterBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, marginTop: 12, gap: 8, flexWrap: 'wrap' },
   formats: { flexDirection: 'row', gap: 20 },
   formatButton: { minHeight: 48, justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  formatSelected: { borderBottomColor: colors.ink },
+  formatSelected: { borderBottomColor: colors.highlight },
   formatText: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
   formatTextSelected: { fontSize: 13, color: colors.ink, fontFamily: fonts.semibold },
   genreToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48 },
   genres: { gap: 8, paddingVertical: 16, paddingRight: 4 },
   filterSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   clearFilters: { minHeight: 44, justifyContent: 'center' },
-  clearText: { fontFamily: fonts.regular, fontSize: 12, color: colors.accent, textDecorationLine: 'underline' },
+  clearText: { fontFamily: fonts.regular, fontSize: 12, color: colors.highlight, textDecorationLine: 'underline' },
   feature: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   featureCopy: { flex: 1, gap: 6 },
-  featureLabel: { fontSize: 10, letterSpacing: 1, fontFamily: fonts.semibold, color: colors.muted },
+  featureLabel: { fontSize: 10, letterSpacing: 1, fontFamily: fonts.bold, color: colors.highlight },
   featureTitle: { fontSize: 20, lineHeight: 28, fontFamily: fonts.semibold, color: colors.ink },
-  featureLink: { fontFamily: fonts.regular, fontSize: 12, color: colors.accent, marginTop: 3 },
+  featureLink: { fontFamily: fonts.semibold, fontSize: 12, color: colors.highlight, marginTop: 3 },
   catalogHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 24, paddingBottom: 20, gap: 12 },
   sectionTitle: { fontSize: 20, fontFamily: fonts.semibold, color: colors.ink },
   catalogCard: { marginBottom: 28 },

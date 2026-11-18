@@ -194,7 +194,7 @@ const makeStyles = (colors) => StyleSheet.create({
   search: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, minHeight: 52, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: 6, gap: 10 },
   searchInput: { fontFamily: fonts.regular, flex: 1, minHeight: 50, fontSize: 16, color: colors.ink }, chips: { gap: 8 }, wrap: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   entry: { flexDirection: 'row', gap: 16, paddingVertical: 18, borderBottomWidth: 1, borderColor: colors.border },
-  entryBody: { flex: 1, gap: 7 }, format: { color: colors.accent, fontSize: 11, letterSpacing: 0.4, fontFamily: fonts.bold },
+  entryBody: { flex: 1, gap: 7 }, format: { color: colors.highlight, fontSize: 11, letterSpacing: 0.4, fontFamily: fonts.bold },
   title: { fontSize: 16, fontFamily: fonts.bold, color: colors.ink, lineHeight: 22 }, body: { fontFamily: fonts.regular, color: colors.muted, fontSize: 14, lineHeight: 22 },
   entryActions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 0 }, empty: { paddingVertical: 34, gap: 16, alignItems: 'center' }, emptyTitle: { fontSize: 24, color: colors.ink, fontFamily: fonts.bold },
   success: { fontFamily: fonts.regular, color: colors.accent, fontSize: 13 }, scrim: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', padding: 20 },
