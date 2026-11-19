@@ -5,6 +5,7 @@ export class ApiError extends Error {
     this.name = 'ApiError';
     this.status = options.status;
     this.code = options.code ?? 'API_ERROR';
+    if (options.entryId !== undefined) this.entryId = options.entryId;
   }
 }
 

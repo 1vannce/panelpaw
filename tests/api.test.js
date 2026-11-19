@@ -335,4 +335,17 @@ test('updating progress without a listId keeps the saved list', async () => {
 test('an unreadable saved entry is named in the error', async () => {
   memoryTracker([entry, { ...entry, id: 'bad1', progress: 'many' }]);
   await assert.rejects(createTrackerApi(baseUrl).listEntries(), /Saved entry bad1 is unreadable/);
+  await assert.rejects(createTrackerApi(baseUrl).listEntries(), (error) => error.entryId === 'bad1');
+});
+
+test('adding an entry requires a list, even though updates may omit it', async () => {
+  memoryTracker([]);
+  await assert.rejects(createTrackerApi(baseUrl).addEntry({ manga, status: 'reading', progress: 0 }), /valid reading list/);
+});
+
+test('updating an entry ignores fields outside the editable set', async () => {
+  const puts = memoryTracker([entry]);
+  await createTrackerApi(baseUrl).updateEntry({ entry, changes: { progress: 3, status: 'reading', title: 'Hacked', mangaId: 99 } });
+  assert.equal(puts[0].title, entry.title);
+  assert.equal(puts[0].mangaId, entry.mangaId);
 });
