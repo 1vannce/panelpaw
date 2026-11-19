@@ -9,7 +9,7 @@ import { useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.j
 import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { fonts } from "../theme.js";
 import { useThemed } from "../providers/ThemeProvider.jsx";
-import { READING_STATUSES, STATUS_LABELS } from "../types.js";
+import { READING_STATUSES, STATUS_LABELS, settleProgress } from "../types.js";
 
 
 export default function TitleDetailsScreen() {
@@ -81,8 +81,9 @@ export default function TitleDetailsScreen() {
       return;
     }
     try {
-      const changes = { status, progress: chapter, listId };
-      if (entry) await updateEntry.mutateAsync({ entry, changes });else
+      const changes = { ...settleProgress({ progress: chapter, status, total: manga.chapters }), listId };
+      // Send the catalog's current total so a stale saved total cannot cap an ongoing series.
+      if (entry) await updateEntry.mutateAsync({ entry, changes: manga.chapters ? { ...changes, totalChapters: manga.chapters } : changes });else
       await addEntry.mutateAsync({ manga, ...changes });
       dirtyRef.current = false;
       setDirty(false);

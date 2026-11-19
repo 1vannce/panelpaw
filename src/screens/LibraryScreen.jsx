@@ -10,7 +10,7 @@ import { useThemed } from "../providers/ThemeProvider.jsx";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { incrementChapter, useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
 import { getErrorMessage } from "../api/http.js";
-import { READING_STATUSES, STATUS_LABELS } from "../types.js";
+import { READING_STATUSES, STATUS_LABELS, settleProgress } from "../types.js";
 import { SORTS, sortEntries } from "../library.js";
 
 export default function LibraryScreen() {
@@ -52,15 +52,10 @@ export default function LibraryScreen() {
     if (!/^\d+$/.test(progress.trim())) {setModalError('Enter a whole chapter number, starting from 0.');return;}
     // Keep status and progress in step, as the Title screen does.
     const total = editing.totalChapters;
-    let chapter = Number(progress);
-    let nextStatus = editStatus;
-    if (total !== null) {
-      if (chapter > total) {setModalError('This title has ' + total + ' chapters. Choose a chapter within that range.');return;}
-      if (editStatus === 'completed') chapter = total;
-      else if (chapter === total) nextStatus = 'completed';
-    }
+    if (total !== null && Number(progress) > total) {setModalError('This title has ' + total + ' chapters. Choose a chapter within that range.');return;}
+    const settled = settleProgress({ progress: Number(progress), status: editStatus, total });
     try {
-      await actions.updateEntry.mutateAsync({ entry: editing, changes: { progress: chapter, status: nextStatus, listId: editList } });
+      await actions.updateEntry.mutateAsync({ entry: editing, changes: { ...settled, listId: editList } });
       setEditing(null);setNotice('Reading progress saved.');setError('');
     } catch (cause) {setModalError(getErrorMessage(cause));}
   }
@@ -105,7 +100,7 @@ export default function LibraryScreen() {
     <>
         <View style={styles.stats}>{[
         ['SAVED', allEntries.length, 'book-outline'],
-        ['READING', allEntries.filter((entry) => entry.status === 'reading').length, 'book-outline'],
+        ['READING', allEntries.filter((entry) => entry.status === 'reading').length, 'bookmark-outline'],
         ['CHAPTERS', allEntries.reduce((sum, entry) => sum + entry.progress, 0), 'layers-outline']].
         map(([label, count, icon]) => <View key={String(label)} style={styles.stat}>
           <Ionicons name={icon} size={19} color={colors.accent} /><Text style={styles.statNumber}>{count}</Text><Text style={styles.statLabel}>{label}</Text>
@@ -172,7 +167,7 @@ export default function LibraryScreen() {
         {lists.isError ? <Notice title="Lists could not load" message={getErrorMessage(lists.error)} tone="error" actionLabel="Retry lists" onAction={() => void lists.refetch()} /> : null}<View style={styles.wrap}><Chip label="Unfiled" selected={!editList} onPress={() => setEditList(null)} />
           {allLists.map((list) => <Chip key={list.id} label={list.name} selected={editList === list.id} onPress={() => setEditList(list.id)} />)}</View>
         {modalError ? <Notice title="Check your update" message={modalError} tone="error" /> : null}
-        <Button label="Save progress" onPress={saveEntry} loading={busy} disabled={lists.isError || lists.isPending} />
+        <Button label="Save progress" onPress={saveEntry} loading={busy} disabled={(lists.isError || lists.isPending) && editList !== editing?.listId} />
       </ScrollView></SafeAreaView></KeyboardAvoidingView>
     </Modal>
     <Modal visible={manageLists && !confirmation} transparent animationType="fade" onRequestClose={closeLists}>
