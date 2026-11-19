@@ -301,3 +301,38 @@ test('clearing a genre removes the category restriction', async () => {
   assert.equal(requests[1].searchParams.has('filter[categories]'), false);
   assert.equal(requests[1].searchParams.get('page[offset]'), '0');
 });
+
+function memoryTracker(stored) {
+  const puts = [];
+  globalThis.fetch = async (input, init) => {
+    const method = init?.method ?? 'GET';
+    const id = new URL(String(input)).pathname.split('/entries/')[1];
+    if (method === 'GET') return json(id ? stored.find((item) => item.id === id) : stored);
+    puts.push(JSON.parse(String(init.body)));
+    return json(puts.at(-1));
+  };
+  return puts;
+}
+
+test('a fresh catalog total replaces a stale saved total', async () => {
+  const puts = memoryTracker([{ ...entry, totalChapters: 100, progress: 100, status: 'completed' }]);
+  const api = createTrackerApi(baseUrl);
+  await assert.rejects(api.updateEntry({ entry, changes: { progress: 110, status: 'reading' } }), /cannot exceed 100/);
+  const saved = await api.updateEntry({ entry, changes: { progress: 110, status: 'reading', totalChapters: 120 } });
+  assert.equal(saved.totalChapters, 120);
+  assert.equal(saved.progress, 110);
+  assert.equal(puts.length, 1);
+  await assert.rejects(api.updateEntry({ entry, changes: { progress: 1, status: 'reading', totalChapters: -3 } }), /not valid/);
+});
+
+test('updating progress without a listId keeps the saved list', async () => {
+  const puts = memoryTracker([{ ...entry, listId: 'list1' }]);
+  await createTrackerApi(baseUrl).updateEntry({ entry, changes: { progress: 3, status: 'reading' } });
+  assert.equal(puts[0].listId, 'list1');
+  assert.equal(puts[0].progress, 3);
+});
+
+test('an unreadable saved entry is named in the error', async () => {
+  memoryTracker([entry, { ...entry, id: 'bad1', progress: 'many' }]);
+  await assert.rejects(createTrackerApi(baseUrl).listEntries(), /Saved entry bad1 is unreadable/);
+});

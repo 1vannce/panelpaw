@@ -94,7 +94,13 @@ export function createTrackerApi(baseUrl) {
   async function listEntries(signal) {
     const raw = await requestJson(endpoint('/entries'), { signal });
     if (!Array.isArray(raw)) return invalidResponse('Entries collection');
-    const entries = raw.map(parseEntry);
+    const entries = raw.map((item, index) => {
+      try {return parseEntry(item);}
+      catch (error) {
+        const label = item && typeof item === 'object' && nonempty(item.id) ? 'Saved entry ' + item.id : 'Saved entry #' + (index + 1);
+        throw new ApiError(label + ' is unreadable. Fix or delete it in your API dashboard. ' + getErrorMessage(error), { code: 'INVALID_RESPONSE' });
+      }
+    });
     if (new Set(entries.map((item) => item.id)).size !== entries.length) return invalidResponse('Entries collection IDs');
     return entries.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
   }
@@ -121,7 +127,7 @@ export function createTrackerApi(baseUrl) {
   function validateChanges(changes, total) {
     validateProgress(changes.progress, total);
     if (!status(changes.status)) throw new ApiError('Choose a valid reading status.', { code: 'VALIDATION' });
-    if (!(changes.listId === null || nonempty(changes.listId))) throw new ApiError('Choose a valid reading list.', { code: 'VALIDATION' });
+    if (changes.listId !== undefined && !(changes.listId === null || nonempty(changes.listId))) throw new ApiError('Choose a valid reading list.', { code: 'VALIDATION' });
   }
   async function writeEntry(entry) {
     const saved = parseEntry(await requestJson(endpoint('/entries/' + resourceId(entry.id)), { method: 'PUT', body: entry }));
@@ -151,9 +157,14 @@ export function createTrackerApi(baseUrl) {
   function updateEntry({ entry, changes }) {
     return serialize(baseUrl, async () => {
       const current = await getEntry(entry.id);
-      validateChanges(changes, current.totalChapters);
-      if (changes.listId !== current.listId) await ensureList(changes.listId);
-      return writeEntry({ ...current, ...changes, updatedAt: new Date().toISOString() });
+      // Omitted fields keep their saved value. A fresh catalog total replaces a stale saved one.
+      const patch = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined));
+      if (patch.totalChapters !== undefined && patch.totalChapters !== null && !(Number.isSafeInteger(patch.totalChapters) && patch.totalChapters >= 0)) {
+        throw new ApiError('The chapter total is not valid.', { code: 'VALIDATION' });
+      }
+      validateChanges(patch, patch.totalChapters !== undefined ? patch.totalChapters : current.totalChapters);
+      if (patch.listId !== undefined && patch.listId !== current.listId) await ensureList(patch.listId);
+      return writeEntry({ ...current, ...patch, updatedAt: new Date().toISOString() });
     });
   }
   function removeEntry(id) {

@@ -9,7 +9,7 @@ import { nextChapter } from "../types.js";
 /** One more chapter read: saves the next progress/status and plays the haptic. Throws on failure. */
 export async function incrementChapter(updateEntry, entry) {
   const next = nextChapter(entry);
-  await updateEntry.mutateAsync({ entry, changes: { ...next, listId: entry.listId } });
+  await updateEntry.mutateAsync({ entry, changes: next });
   const finished = next.status === 'completed' && entry.status !== 'completed';
   if (finished) stampThud();else tick();
   return { finished, started: entry.status === 'planned' };
