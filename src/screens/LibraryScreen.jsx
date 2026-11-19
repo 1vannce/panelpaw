@@ -138,7 +138,8 @@ export default function LibraryScreen() {
     contentContainerStyle={styles.content} ListHeaderComponent={header} ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
     refreshControl={connection.isConfigured ? <RefreshControl refreshing={entries.isRefetching || lists.isRefetching} onRefresh={refresh} tintColor={colors.accent} /> : undefined}
     ListEmptyComponent={connection.isConfigured ? entries.isPending ? <ActivityIndicator color={colors.accent} style={{ padding: 36 }} /> : entries.isError ?
-    <Notice title="Could not load your library" message={getErrorMessage(entries.error)} tone="error" actionLabel="Try again" onAction={refresh} /> :
+    <View style={{ gap: 10 }}><Notice title="Could not load your library" message={getErrorMessage(entries.error)} tone="error" actionLabel="Try again" onAction={refresh} />
+          <Button label="Check connection settings" variant="ghost" icon="options-outline" onPress={() => router.push('/connection')} /></View> :
     <View style={styles.empty}><EmptyArt />
           <Text style={styles.emptyTitle}>{allEntries.length ? 'No matching stories' : 'No saved titles yet'}</Text>
           <Text style={styles.body}>{allEntries.length ? 'Try another filter or search.' : 'Discover a manga or manhwa and add it to your library.'}</Text>
