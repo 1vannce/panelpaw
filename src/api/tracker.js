@@ -75,6 +75,9 @@ function checkedBaseUrl(value) {
   }
 }
 
+// Only these fields may change on an existing entry; identity and catalog fields stay as saved.
+const EDITABLE_FIELDS = ['progress', 'status', 'listId', 'totalChapters'];
+
 function sameEntry(saved, expected) {
   const keys = Object.keys(expected);
   if (keys.some((key) => saved[key] !== expected[key])) {
@@ -94,7 +97,14 @@ export function createTrackerApi(baseUrl) {
   async function listEntries(signal) {
     const raw = await requestJson(endpoint('/entries'), { signal });
     if (!Array.isArray(raw)) return invalidResponse('Entries collection');
-    const entries = raw.map(parseEntry);
+    const entries = raw.map((item, index) => {
+      try {return parseEntry(item);}
+      catch (error) {
+        const entryId = item && typeof item === 'object' && nonempty(item.id) ? item.id : undefined;
+        const label = entryId ? 'Saved entry ' + entryId : 'Saved entry #' + (index + 1);
+        throw new ApiError(label + ' is unreadable. Fix or delete it in your API dashboard. ' + getErrorMessage(error), { code: 'INVALID_RESPONSE', entryId });
+      }
+    });
     if (new Set(entries.map((item) => item.id)).size !== entries.length) return invalidResponse('Entries collection IDs');
     return entries.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
   }
@@ -118,9 +128,11 @@ export function createTrackerApi(baseUrl) {
   async function ensureList(id) {
     if (id !== null) await getList(id);
   }
-  function validateChanges(changes, total) {
+  // A new entry must name its list (or null); an update may omit it to keep the saved list.
+  function validateChanges(changes, total, { listOptional = false } = {}) {
     validateProgress(changes.progress, total);
     if (!status(changes.status)) throw new ApiError('Choose a valid reading status.', { code: 'VALIDATION' });
+    if (listOptional && changes.listId === undefined) return;
     if (!(changes.listId === null || nonempty(changes.listId))) throw new ApiError('Choose a valid reading list.', { code: 'VALIDATION' });
   }
   async function writeEntry(entry) {
@@ -151,9 +163,14 @@ export function createTrackerApi(baseUrl) {
   function updateEntry({ entry, changes }) {
     return serialize(baseUrl, async () => {
       const current = await getEntry(entry.id);
-      validateChanges(changes, current.totalChapters);
-      if (changes.listId !== current.listId) await ensureList(changes.listId);
-      return writeEntry({ ...current, ...changes, updatedAt: new Date().toISOString() });
+      // Omitted fields keep their saved value. A fresh catalog total replaces a stale saved one.
+      const patch = Object.fromEntries(EDITABLE_FIELDS.filter((key) => changes[key] !== undefined).map((key) => [key, changes[key]]));
+      if (patch.totalChapters !== undefined && patch.totalChapters !== null && !(Number.isSafeInteger(patch.totalChapters) && patch.totalChapters >= 0)) {
+        throw new ApiError('The chapter total is not valid.', { code: 'VALIDATION' });
+      }
+      validateChanges(patch, patch.totalChapters !== undefined ? patch.totalChapters : current.totalChapters, { listOptional: true });
+      if (patch.listId !== undefined && patch.listId !== current.listId) await ensureList(patch.listId);
+      return writeEntry({ ...current, ...patch, updatedAt: new Date().toISOString() });
     });
   }
   function removeEntry(id) {
