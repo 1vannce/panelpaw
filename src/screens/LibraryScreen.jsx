@@ -46,13 +46,14 @@ export default function LibraryScreen() {
     if (busy) return;
     setEditing(entry);setProgress(String(entry.progress));setEditStatus(entry.status);setEditList(entry.listId);setModalError('');
   }
+  const listBlocked = (lists.isError || lists.isPending) && editList !== editing?.listId;
   async function saveEntry() {
     if (!editing) return;
     setModalError('');
     if (!/^\d+$/.test(progress.trim())) {setModalError('Enter a whole chapter number, starting from 0.');return;}
     // Keep status and progress in step, as the Title screen does.
     const total = editing.totalChapters;
-    if (total !== null && Number(progress) > total) {setModalError('This title has ' + total + ' chapters. Choose a chapter within that range.');return;}
+    if (total !== null && Number(progress) > total) {setModalError('This title has ' + total + ' chapters. If the series has grown, open it and save once to refresh the total.');return;}
     const settled = settleProgress({ progress: Number(progress), status: editStatus, total });
     try {
       await actions.updateEntry.mutateAsync({ entry: editing, changes: { ...settled, listId: editList } });
@@ -166,8 +167,9 @@ export default function LibraryScreen() {
         <Text style={styles.label}>READING LIST</Text>
         {lists.isError ? <Notice title="Lists could not load" message={getErrorMessage(lists.error)} tone="error" actionLabel="Retry lists" onAction={() => void lists.refetch()} /> : null}<View style={styles.wrap}><Chip label="Unfiled" selected={!editList} onPress={() => setEditList(null)} />
           {allLists.map((list) => <Chip key={list.id} label={list.name} selected={editList === list.id} onPress={() => setEditList(list.id)} />)}</View>
+        {listBlocked ? <Text style={styles.body}>Waiting for your reading lists before the list can change. Pick the saved list to save progress now.</Text> : null}
         {modalError ? <Notice title="Check your update" message={modalError} tone="error" /> : null}
-        <Button label="Save progress" onPress={saveEntry} loading={busy} disabled={(lists.isError || lists.isPending) && editList !== editing?.listId} />
+        <Button label="Save progress" onPress={saveEntry} loading={busy} disabled={listBlocked} />
       </ScrollView></SafeAreaView></KeyboardAvoidingView>
     </Modal>
     <Modal visible={manageLists && !confirmation} transparent animationType="fade" onRequestClose={closeLists}>

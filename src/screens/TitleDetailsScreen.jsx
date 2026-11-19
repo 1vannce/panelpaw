@@ -82,8 +82,8 @@ export default function TitleDetailsScreen() {
     }
     try {
       const changes = { ...settleProgress({ progress: chapter, status, total: manga.chapters }), listId };
-      // Send the catalog's current total so a stale saved total cannot cap an ongoing series.
-      if (entry) await updateEntry.mutateAsync({ entry, changes: manga.chapters ? { ...changes, totalChapters: manga.chapters } : changes });else
+      // Send the catalog's current total (null when unknown) so a stale saved total cannot cap an ongoing series.
+      if (entry) await updateEntry.mutateAsync({ entry, changes: { ...changes, totalChapters: manga.chapters || null } });else
       await addEntry.mutateAsync({ manga, ...changes });
       dirtyRef.current = false;
       setDirty(false);
