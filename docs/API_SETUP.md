@@ -12,7 +12,7 @@ The existing local `.env` still selects the historical public Beeceptor demo. It
 EXPO_PUBLIC_TRACKER_API_URL=
 ```
 
-The original demo was created on **October 11, 2026**. Beeceptor documents removal of unclaimed endpoints after 30 days, so plan to finish migration **before November 10, 2026**. This is an estimated cleanup date, not a live confirmation of claim status or deletion time. [Retention policy](https://beeceptor.com/pricing/) checked October 28, 2026.
+The original demo was created on **October 11, 2026**. Beeceptor documents removal of unclaimed endpoints after 30 days, so the estimated cleanup date of **November 10, 2026** has passed and the endpoint may already be gone. This is not a live confirmation of claim status or deletion time. [Retention policy](https://beeceptor.com/pricing/) checked October 28, 2026.
 
 The app now ignores that specific historical demo URL as an automatic build default. A previously saved connection is preserved and shows a migration notice on the Connection screen. No data is moved or deleted automatically. A new installation with only the old environment URL can browse the catalog, but must connect a tracker before saving.
 

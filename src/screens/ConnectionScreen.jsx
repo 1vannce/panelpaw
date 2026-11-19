@@ -49,7 +49,7 @@ export default function ConnectionScreen() {
       <View style={styles.card}>
         <Text style={styles.heading}>Connection settings</Text>
         <Text style={styles.body}>Use your MockAPI project's base URL, including its API prefix. The endpoint needs two collections: entries and lists.</Text>
-        {isLegacyDemoUrl(connection.baseUrl) ? <Notice title="Move your demo library" message="The public Beeceptor demo may expire around November 10, 2026. Back up its entries and lists, then connect your own MockAPI project. Switching URLs does not copy records." /> : null}
+        {isLegacyDemoUrl(connection.baseUrl) ? <Notice title="Move your demo library" message="The public Beeceptor demo was due to be cleaned up around November 10, 2026 and may already be gone. Back up any entries and lists it still holds, then connect your own MockAPI project. Switching URLs does not copy records." /> : null}
         <Text style={styles.label}>API BASE URL</Text>
         <TextInput accessibilityLabel="Tracker API base URL" value={value} onChangeText={(text) => {setEdited(true);setValue(text);}} editable={!busy && connection.isReady}
           placeholder="https://your-project.mockapi.io/api/v1" placeholderTextColor={colors.muted}
