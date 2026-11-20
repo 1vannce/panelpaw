@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +11,8 @@ import { useThemed } from "../providers/ThemeProvider.jsx";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { incrementChapter, useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
 import { getErrorMessage } from "../api/http.js";
-import { READING_STATUSES, STATUS_LABELS } from "../types.js";
+import { getTitle } from "../api/catalog.js";
+import { READING_STATUSES, STATUS_LABELS, settleProgress } from "../types.js";
 import { SORTS, sortEntries } from "../library.js";
 
 export default function LibraryScreen() {
@@ -19,6 +21,7 @@ export default function LibraryScreen() {
   const entries = useEntries();
   const lists = useLists();
   const actions = useTrackerMutations();
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState('all');
   const [listId, setListId] = useState('all');
   const [sort, setSort] = useState('recent');
@@ -34,7 +37,8 @@ export default function LibraryScreen() {
   const [renameId, setRenameId] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
   const [modalError, setModalError] = useState('');
-  const busy = actions.addEntry.isPending || actions.updateEntry.isPending || actions.removeEntry.isPending ||
+  const [saving, setSaving] = useState(false);
+  const busy = saving || actions.addEntry.isPending || actions.updateEntry.isPending || actions.removeEntry.isPending ||
   actions.addList.isPending || actions.renameList.isPending || actions.removeList.isPending;
   const allEntries = entries.data ?? [];
   const allLists = lists.data ?? [];
@@ -46,21 +50,35 @@ export default function LibraryScreen() {
     if (busy) return;
     setEditing(entry);setProgress(String(entry.progress));setEditStatus(entry.status);setEditList(entry.listId);setModalError('');
   }
+  const listBlocked = (lists.isError || lists.isPending) && editList !== editing?.listId;
   async function saveEntry() {
-    if (!editing) return;
+    if (!editing || busy) return;
+    // Count the catalog check as busy too, so Save and Close stay locked until the save ends.
+    setSaving(true);
+    try {await submitEntry();} finally {setSaving(false);}
+  }
+  async function submitEntry() {
     setModalError('');
     if (!/^\d+$/.test(progress.trim())) {setModalError('Enter a whole chapter number, starting from 0.');return;}
     // Keep status and progress in step, as the Title screen does.
-    const total = editing.totalChapters;
-    let chapter = Number(progress);
-    let nextStatus = editStatus;
-    if (total !== null) {
-      if (chapter > total) {setModalError('This title has ' + total + ' chapters. Choose a chapter within that range.');return;}
-      if (editStatus === 'completed') chapter = total;
-      else if (chapter === total) nextStatus = 'completed';
+    let total = editing.totalChapters;
+    let freshTotal;
+    if (total !== null && Number(progress) > total) {
+      // The series may have grown since it was saved: check the catalog before refusing.
+      try {
+        const manga = await queryClient.fetchQuery({ queryKey: ['title', 'kitsu', editing.mangaId], queryFn: ({ signal }) => getTitle(editing.mangaId, signal), staleTime: 30 * 60 * 1000 });
+        freshTotal = manga.chapters || null;
+      } catch {
+        setModalError('This title has ' + total + ' saved chapters, and the catalog could not be checked for more. Try again in a moment.');return;
+      }
+      if (freshTotal !== null && Number(progress) > freshTotal) {setModalError('This title has ' + freshTotal + ' chapters. Choose a chapter within that range.');return;}
+      total = freshTotal;
     }
+    const settled = settleProgress({ progress: Number(progress), status: editStatus, total });
+    const changes = { ...settled, listId: editList };
+    if (freshTotal !== undefined) changes.totalChapters = freshTotal;
     try {
-      await actions.updateEntry.mutateAsync({ entry: editing, changes: { progress: chapter, status: nextStatus, listId: editList } });
+      await actions.updateEntry.mutateAsync({ entry: editing, changes });
       setEditing(null);setNotice('Reading progress saved.');setError('');
     } catch (cause) {setModalError(getErrorMessage(cause));}
   }
@@ -105,7 +123,7 @@ export default function LibraryScreen() {
     <>
         <View style={styles.stats}>{[
         ['SAVED', allEntries.length, 'book-outline'],
-        ['READING', allEntries.filter((entry) => entry.status === 'reading').length, 'book-outline'],
+        ['READING', allEntries.filter((entry) => entry.status === 'reading').length, 'bookmark-outline'],
         ['CHAPTERS', allEntries.reduce((sum, entry) => sum + entry.progress, 0), 'layers-outline']].
         map(([label, count, icon]) => <View key={String(label)} style={styles.stat}>
           <Ionicons name={icon} size={19} color={colors.accent} /><Text style={styles.statNumber}>{count}</Text><Text style={styles.statLabel}>{label}</Text>
@@ -171,9 +189,12 @@ export default function LibraryScreen() {
         }} />)}</View>
         <Text style={styles.label}>READING LIST</Text>
         {lists.isError ? <Notice title="Lists could not load" message={getErrorMessage(lists.error)} tone="error" actionLabel="Retry lists" onAction={() => void lists.refetch()} /> : null}<View style={styles.wrap}><Chip label="Unfiled" selected={!editList} onPress={() => setEditList(null)} />
-          {allLists.map((list) => <Chip key={list.id} label={list.name} selected={editList === list.id} onPress={() => setEditList(list.id)} />)}</View>
+          {allLists.map((list) => <Chip key={list.id} label={list.name} selected={editList === list.id} onPress={() => setEditList(list.id)} />)}
+          {editing?.listId && !allLists.some((list) => list.id === editing.listId) ?
+          <Chip label="Saved list" selected={editList === editing.listId} onPress={() => setEditList(editing.listId)} /> : null}</View>
+        {listBlocked ? <Text style={styles.body}>Waiting for your reading lists before the list can change. Pick the saved list to save progress now.</Text> : null}
         {modalError ? <Notice title="Check your update" message={modalError} tone="error" /> : null}
-        <Button label="Save progress" onPress={saveEntry} loading={busy} disabled={lists.isError || lists.isPending} />
+        <Button label="Save progress" onPress={saveEntry} loading={busy} disabled={listBlocked} />
       </ScrollView></SafeAreaView></KeyboardAvoidingView>
     </Modal>
     <Modal visible={manageLists && !confirmation} transparent animationType="fade" onRequestClose={closeLists}>

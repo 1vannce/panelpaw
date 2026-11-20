@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { nextChapter } from "../src/types.js";
+import { nextChapter, settleProgress } from "../src/types.js";
 
 const entry = (overrides) => ({ progress: 0, totalChapters: 10, status: 'reading', ...overrides });
 
@@ -24,4 +24,12 @@ test('an unknown total never auto-completes', () => {
 
 test('progress never goes past a known total', () => {
   assert.deepEqual(nextChapter(entry({ progress: 10, status: 'completed' })), { progress: 10, status: 'completed' });
+});
+
+test('hand-saved status and progress stay in step', () => {
+  assert.deepEqual(settleProgress({ progress: 10, status: 'reading', total: 10 }), { progress: 10, status: 'completed' });
+  assert.deepEqual(settleProgress({ progress: 3, status: 'completed', total: 10 }), { progress: 10, status: 'completed' });
+  assert.deepEqual(settleProgress({ progress: 10, status: 'dropped', total: 10 }), { progress: 10, status: 'dropped' });
+  assert.deepEqual(settleProgress({ progress: 3, status: 'on_hold', total: 10 }), { progress: 3, status: 'on_hold' });
+  assert.deepEqual(settleProgress({ progress: 3, status: 'completed', total: null }), { progress: 3, status: 'completed' });
 });
