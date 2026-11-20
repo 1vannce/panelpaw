@@ -37,7 +37,8 @@ export default function LibraryScreen() {
   const [renameId, setRenameId] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
   const [modalError, setModalError] = useState('');
-  const busy = actions.addEntry.isPending || actions.updateEntry.isPending || actions.removeEntry.isPending ||
+  const [saving, setSaving] = useState(false);
+  const busy = saving || actions.addEntry.isPending || actions.updateEntry.isPending || actions.removeEntry.isPending ||
   actions.addList.isPending || actions.renameList.isPending || actions.removeList.isPending;
   const allEntries = entries.data ?? [];
   const allLists = lists.data ?? [];
@@ -51,7 +52,12 @@ export default function LibraryScreen() {
   }
   const listBlocked = (lists.isError || lists.isPending) && editList !== editing?.listId;
   async function saveEntry() {
-    if (!editing) return;
+    if (!editing || busy) return;
+    // Count the catalog check as busy too, so Save and Close stay locked until the save ends.
+    setSaving(true);
+    try {await submitEntry();} finally {setSaving(false);}
+  }
+  async function submitEntry() {
     setModalError('');
     if (!/^\d+$/.test(progress.trim())) {setModalError('Enter a whole chapter number, starting from 0.');return;}
     // Keep status and progress in step, as the Title screen does.
@@ -183,7 +189,9 @@ export default function LibraryScreen() {
         }} />)}</View>
         <Text style={styles.label}>READING LIST</Text>
         {lists.isError ? <Notice title="Lists could not load" message={getErrorMessage(lists.error)} tone="error" actionLabel="Retry lists" onAction={() => void lists.refetch()} /> : null}<View style={styles.wrap}><Chip label="Unfiled" selected={!editList} onPress={() => setEditList(null)} />
-          {allLists.map((list) => <Chip key={list.id} label={list.name} selected={editList === list.id} onPress={() => setEditList(list.id)} />)}</View>
+          {allLists.map((list) => <Chip key={list.id} label={list.name} selected={editList === list.id} onPress={() => setEditList(list.id)} />)}
+          {editing?.listId && !allLists.some((list) => list.id === editing.listId) ?
+          <Chip label="Saved list" selected={editList === editing.listId} onPress={() => setEditList(editing.listId)} /> : null}</View>
         {listBlocked ? <Text style={styles.body}>Waiting for your reading lists before the list can change. Pick the saved list to save progress now.</Text> : null}
         {modalError ? <Notice title="Check your update" message={modalError} tone="error" /> : null}
         <Button label="Save progress" onPress={saveEntry} loading={busy} disabled={listBlocked} />
