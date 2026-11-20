@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +11,7 @@ import { useThemed } from "../providers/ThemeProvider.jsx";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { incrementChapter, useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
 import { getErrorMessage } from "../api/http.js";
+import { getTitle } from "../api/catalog.js";
 import { READING_STATUSES, STATUS_LABELS, settleProgress } from "../types.js";
 import { SORTS, sortEntries } from "../library.js";
 
@@ -19,6 +21,7 @@ export default function LibraryScreen() {
   const entries = useEntries();
   const lists = useLists();
   const actions = useTrackerMutations();
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState('all');
   const [listId, setListId] = useState('all');
   const [sort, setSort] = useState('recent');
@@ -52,11 +55,24 @@ export default function LibraryScreen() {
     setModalError('');
     if (!/^\d+$/.test(progress.trim())) {setModalError('Enter a whole chapter number, starting from 0.');return;}
     // Keep status and progress in step, as the Title screen does.
-    const total = editing.totalChapters;
-    if (total !== null && Number(progress) > total) {setModalError('This title has ' + total + ' chapters. If the series has grown, open it and save once to refresh the total.');return;}
+    let total = editing.totalChapters;
+    let freshTotal;
+    if (total !== null && Number(progress) > total) {
+      // The series may have grown since it was saved: check the catalog before refusing.
+      try {
+        const manga = await queryClient.fetchQuery({ queryKey: ['title', 'kitsu', editing.mangaId], queryFn: ({ signal }) => getTitle(editing.mangaId, signal), staleTime: 30 * 60 * 1000 });
+        freshTotal = manga.chapters || null;
+      } catch {
+        setModalError('This title has ' + total + ' saved chapters, and the catalog could not be checked for more. Try again in a moment.');return;
+      }
+      if (freshTotal !== null && Number(progress) > freshTotal) {setModalError('This title has ' + freshTotal + ' chapters. Choose a chapter within that range.');return;}
+      total = freshTotal;
+    }
     const settled = settleProgress({ progress: Number(progress), status: editStatus, total });
+    const changes = { ...settled, listId: editList };
+    if (freshTotal !== undefined) changes.totalChapters = freshTotal;
     try {
-      await actions.updateEntry.mutateAsync({ entry: editing, changes: { ...settled, listId: editList } });
+      await actions.updateEntry.mutateAsync({ entry: editing, changes });
       setEditing(null);setNotice('Reading progress saved.');setError('');
     } catch (cause) {setModalError(getErrorMessage(cause));}
   }

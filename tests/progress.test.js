@@ -29,6 +29,7 @@ test('progress never goes past a known total', () => {
 test('hand-saved status and progress stay in step', () => {
   assert.deepEqual(settleProgress({ progress: 10, status: 'reading', total: 10 }), { progress: 10, status: 'completed' });
   assert.deepEqual(settleProgress({ progress: 3, status: 'completed', total: 10 }), { progress: 10, status: 'completed' });
+  assert.deepEqual(settleProgress({ progress: 10, status: 'dropped', total: 10 }), { progress: 10, status: 'dropped' });
   assert.deepEqual(settleProgress({ progress: 3, status: 'on_hold', total: 10 }), { progress: 3, status: 'on_hold' });
   assert.deepEqual(settleProgress({ progress: 3, status: 'completed', total: null }), { progress: 3, status: 'completed' });
 });
