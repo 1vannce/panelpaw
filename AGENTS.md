@@ -24,7 +24,7 @@ Stop the running Expo server before `npm ci` on Windows; it locks native files. 
 - `app/` Expo Router routes only (thin wrappers): `(tabs)/index`, `(tabs)/library`, `title/[id]`, `connection`.
 - `src/screens/` screen components (Home, TitleDetails, Library, Connection).
 - `src/api/` `http.js` (Fetch, timeouts, GET-only retry), `catalog.js` (Kitsu), `tracker.js` (entries/lists CRUD and validation).
-- `src/hooks/` TanStack Query hooks: `useCatalog`, `useTitle`, `useEntries`, `useLists`, `useTrackerMutations`.
+- `src/hooks/` TanStack Query hooks: `useCatalog.js` (`useCatalog`, `useTitle`) and `useTracker.js` (`useEntries`, `useLists`, `useTrackerMutations`).
 - `src/providers/` query client and connection (endpoint preference) state.
 - `src/components/ui.jsx`, `src/theme.js` shared UI primitives and tokens. `src/providers/ThemeProvider.jsx` supplies the active palette (`useTheme`, `useThemed`).
 - `src/library.js` (library sort, continue-reading), `src/usage.js` (web flag that lets the landing page skip for returning users), `src/haptics.js` (native only).
@@ -56,7 +56,7 @@ Stop the running Expo server before `npm ci` on Windows; it locks native files. 
 
 - `.env` is gitignored and may hold a real endpoint. Do not print, commit or edit it. Only `.env.example` (blank placeholder) is tracked. Never put keys, tokens or dashboard URLs in tracked files.
 - Do not edit `dist/`, `.expo/`, `node_modules/`, `.npm-cache/`, `output/`, `site/.next/`, `site/out/` (generated or local).
-- The anonymous Beeceptor demo endpoint expires around 2026-11-10; do not use it as a default. See `docs/API_SETUP.md` before changing connection logic.
+- The anonymous Beeceptor demo endpoint passed its expected 2026-11-10 cleanup and may be gone; do not use it as a default. See `docs/API_SETUP.md` before changing connection logic.
 
 ## Verification
 

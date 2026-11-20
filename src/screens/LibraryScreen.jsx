@@ -150,7 +150,8 @@ export default function LibraryScreen() {
     contentContainerStyle={styles.content} ListHeaderComponent={header} ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
     refreshControl={connection.isConfigured ? <RefreshControl refreshing={entries.isRefetching || lists.isRefetching} onRefresh={refresh} tintColor={colors.accent} /> : undefined}
     ListEmptyComponent={connection.isConfigured ? entries.isPending ? <ActivityIndicator color={colors.accent} style={{ padding: 36 }} /> : entries.isError ?
-    <Notice title="Could not load your library" message={getErrorMessage(entries.error)} tone="error" actionLabel="Try again" onAction={refresh} /> :
+    <View style={styles.errorStack}><Notice title="Could not load your library" message={getErrorMessage(entries.error)} tone="error" actionLabel="Try again" onAction={refresh} />
+          <Button label="Check connection settings" variant="secondary" icon="options-outline" onPress={() => router.push('/connection')} /></View> :
     <View style={styles.empty}><EmptyArt />
           <Text style={styles.emptyTitle}>{allEntries.length ? 'No matching stories' : 'No saved titles yet'}</Text>
           <Text style={styles.body}>{allEntries.length ? 'Try another filter or search.' : 'Discover a manga or manhwa and add it to your library.'}</Text>
@@ -221,7 +222,7 @@ const makeStyles = (colors) => StyleSheet.create({
   header: { gap: 22, paddingBottom: 22 }, stats: { borderBottomWidth: 1, borderColor: colors.border, paddingVertical: 20, flexDirection: 'row' },
   stat: { flex: 1, gap: 8, alignItems: 'center' }, statNumber: { fontVariant: ['tabular-nums'], fontSize: 28, fontFamily: fonts.medium, color: colors.accent }, statLabel: { fontSize: 11, letterSpacing: 0.8, color: colors.accent, fontFamily: fonts.bold },
   search: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, minHeight: 52, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: 6, gap: 10 },
-  searchInput: { fontFamily: fonts.regular, flex: 1, minHeight: 50, fontSize: 16, color: colors.ink }, chips: { gap: 8 }, wrap: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  searchInput: { fontFamily: fonts.regular, flex: 1, minHeight: 50, fontSize: 16, color: colors.ink }, chips: { gap: 8 }, errorStack: { gap: 10 }, wrap: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   entry: { flexDirection: 'row', gap: 16, paddingVertical: 18, borderBottomWidth: 1, borderColor: colors.border },
   entryBody: { flex: 1, gap: 7 }, format: { color: colors.highlight, fontSize: 11, letterSpacing: 0.4, fontFamily: fonts.bold },
   title: { fontSize: 16, fontFamily: fonts.bold, color: colors.ink, lineHeight: 22 }, body: { fontFamily: fonts.regular, color: colors.muted, fontSize: 14, lineHeight: 22 },
