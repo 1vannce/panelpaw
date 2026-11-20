@@ -4,7 +4,7 @@ A Manga and Manhwa reading tracker built with React Native, Expo SDK 58, JavaScr
 
 > **Project architecture:** [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) explains every folder in plain language, with comments, a request walkthrough, and a "where to find things" table.
 
-All saved entries and lists are read and written through an external REST API using Fetch. There is no local backend to run. Configure an account-owned MockAPI project with `entries` and `lists` resources for persistent tracker storage. The old public Beeceptor demo is being retired ahead of its expected November 10, 2026 expiry. [API setup and migration checklist](docs/API_SETUP.md).
+All saved entries and lists are read and written through an external REST API using Fetch. There is no local backend to run. Configure an account-owned MockAPI project with `entries` and `lists` resources for persistent tracker storage. The old public Beeceptor demo passed its expected November 10, 2026 cleanup date and may already be gone. [API setup and migration checklist](docs/API_SETUP.md).
 
 ## Run the delivered project
 
@@ -50,9 +50,9 @@ npx vercel login
 npx vercel --prod
 ```
 
-## Move off the public demo before November 10
+## Move off the public demo
 
-The original anonymous Beeceptor endpoint was created on October 11, 2026. Its documented 30-day unclaimed retention puts expected cleanup around **November 10, 2026**; its current claim status and exact deletion time have not been verified. [Provider retention policy](https://beeceptor.com/pricing/).
+The original anonymous Beeceptor endpoint was created on October 11, 2026. Its documented 30-day unclaimed retention put expected cleanup around **November 10, 2026**, which has passed; whether the endpoint still exists has not been verified. [Provider retention policy](https://beeceptor.com/pricing/).
 
 Migration preparation leaves existing `.env` files and credentials unchanged. Supply your actual MockAPI **HTTPS project base URL**, including its configured prefix but excluding `/entries` and `/lists`. The blank setting in `.env.example` is the configuration placeholder. Follow the [backup and cutover steps](docs/API_SETUP.md#migrate-the-existing-library) before changing connections: switching URLs does not copy records.
 
@@ -205,7 +205,7 @@ npx expo-doctor
 npx expo export --platform all
 ```
 
-Verification recorded for the original TypeScript version on October 11, 2026: TypeScript passes, all 14 API tests pass, Expo dependency validation passes, and Expo Doctor passes all 21 checks. Production exports succeed for Android, iOS, and web. A phone-sized browser check verified live catalog search, title details, saving a title, chapter updates, and confirmed removal with no runtime console errors. A separate real Beeceptor check verified entry and list CRUD, including preserving titles when deleting a list; all temporary verification records were removed.
+Verification recorded for the original version (written in TypeScript; the project is now plain JavaScript) on October 11, 2026: TypeScript passes, all 14 API tests pass, Expo dependency validation passes, and Expo Doctor passes all 21 checks. Production exports succeed for Android, iOS, and web. A phone-sized browser check verified live catalog search, title details, saving a title, chapter updates, and confirmed removal with no runtime console errors. A separate real Beeceptor check verified entry and list CRUD, including preserving titles when deleting a list; all temporary verification records were removed.
 
 The automated API tests use controlled Fetch responses and do not touch the public endpoint. Android/iOS bundles were compiled; interaction on a physical native device or simulator was not verified here. Follow [the manual verification sequence](docs/API_SETUP.md#manual-verification) for device testing or a replacement provider.
 
