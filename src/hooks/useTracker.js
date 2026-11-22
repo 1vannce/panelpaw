@@ -4,11 +4,15 @@ import { createTrackerApi } from "../api/tracker.js";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { markAppUsed } from "../usage.js";
 import { stampThud, tick } from "../haptics.js";
-import { nextChapter } from "../types.js";
+import { getTitle } from "../api/catalog.js";
+import { nextChapterChecked } from "../types.js";
 
 /** One more chapter read: saves the next progress/status and plays the haptic. Throws on failure. */
-export async function incrementChapter(updateEntry, entry) {
-  const next = nextChapter(entry);
+export async function incrementChapter(updateEntry, entry, queryClient) {
+  const fetchTotal = async () => (await queryClient.fetchQuery({
+    queryKey: ['title', 'kitsu', entry.mangaId], queryFn: ({ signal }) => getTitle(entry.mangaId, signal), staleTime: 30 * 60 * 1000
+  })).chapters || null;
+  const next = await nextChapterChecked(entry, fetchTotal);
   await updateEntry.mutateAsync({ entry, changes: next });
   const finished = next.status === 'completed' && entry.status !== 'completed';
   if (finished) stampThud();else tick();

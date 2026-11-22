@@ -85,7 +85,7 @@ export default function LibraryScreen() {
   async function increment(entry) {
     setError('');setNotice('');
     try {
-      const { finished, started } = await incrementChapter(actions.updateEntry, entry);
+      const { finished, started } = await incrementChapter(actions.updateEntry, entry, queryClient);
       setNotice(finished ? 'Last chapter read. Marked Completed.' :
       started ? 'One more chapter. Moved to Reading.' : 'One more chapter. Progress saved.');
     } catch (cause) {setError(getErrorMessage(cause));}

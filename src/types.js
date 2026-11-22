@@ -20,3 +20,16 @@ export function nextChapter({ progress, totalChapters, status }) {
   if (known && next >= totalChapters) return { progress: next, status: 'completed' };
   return { progress: next, status: status === 'planned' ? 'reading' : status };
 }
+
+// Like nextChapter, but a +1 that would reach the saved total first asks the catalog for the
+// current total, since a series may have grown since it was saved. Only that case needs the
+// lookup. The result then carries the fresh totalChapters (null when the catalog no longer knows it).
+export async function nextChapterChecked(entry, fetchTotal) {
+  const known = entry.totalChapters !== null && entry.totalChapters !== undefined;
+  if (!known || entry.progress + 1 < entry.totalChapters) return nextChapter(entry);
+  let total;
+  try {total = await fetchTotal();} catch {
+    throw new Error('This title has ' + entry.totalChapters + ' saved chapters, and the catalog could not be checked for more. Try again in a moment.');
+  }
+  return { ...nextChapter({ ...entry, totalChapters: total }), totalChapters: total };
+}
