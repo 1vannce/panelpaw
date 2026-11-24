@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Button, Chip, Cover, EmptyArt, IconButton, Masthead, Notice, ProgressBar, ScreenEnter, SkeletonCover, Tag, ThemeToggle } from '../components/ui.jsx';
@@ -69,6 +70,7 @@ function ContinueRail() {
   const connection = useConnection();
   const entries = useEntries();
   const { updateEntry } = useTrackerMutations();
+  const queryClient = useQueryClient();
   const [error, setError] = useState('');
   if (!connection.isConfigured) return null;
   if (entries.isError) return <View style={styles.railWrap}><Notice title="Could not load your reading list" message={getErrorMessage(entries.error)} actionLabel="Try again" onAction={() => void entries.refetch()} tone="error" /></View>;
@@ -77,7 +79,7 @@ function ContinueRail() {
   async function plusOne(entry) {
     setError('');
     try {
-      await incrementChapter(updateEntry, entry);
+      await incrementChapter(updateEntry, entry, queryClient);
     } catch (cause) { setError(getErrorMessage(cause)); }
   }
   return <View style={styles.railWrap}>

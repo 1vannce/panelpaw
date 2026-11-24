@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { nextChapter, settleProgress } from "../src/types.js";
+import { nextChapter, nextChapterChecked, settleProgress } from "../src/types.js";
 
 const entry = (overrides) => ({ progress: 0, totalChapters: 10, status: 'reading', ...overrides });
 
@@ -32,4 +32,25 @@ test('hand-saved status and progress stay in step', () => {
   assert.deepEqual(settleProgress({ progress: 10, status: 'dropped', total: 10 }), { progress: 10, status: 'dropped' });
   assert.deepEqual(settleProgress({ progress: 3, status: 'on_hold', total: 10 }), { progress: 3, status: 'on_hold' });
   assert.deepEqual(settleProgress({ progress: 3, status: 'completed', total: null }), { progress: 3, status: 'completed' });
+});
+
+test('+1 below the saved last chapter does not look at the catalog', async () => {
+  const lookup = async () => { throw new Error('should not be called'); };
+  assert.deepEqual(await nextChapterChecked(entry({ progress: 4 }), lookup), { progress: 5, status: 'reading' });
+});
+
+test('+1 onto a stale saved total uses the fresh catalog total instead of completing', async () => {
+  assert.deepEqual(await nextChapterChecked(entry({ progress: 9 }), async () => 12), { progress: 10, status: 'reading', totalChapters: 12 });
+});
+
+test('+1 onto a total the catalog confirms still completes the title', async () => {
+  assert.deepEqual(await nextChapterChecked(entry({ progress: 9 }), async () => 10), { progress: 10, status: 'completed', totalChapters: 10 });
+});
+
+test('+1 onto a total the catalog no longer knows keeps reading', async () => {
+  assert.deepEqual(await nextChapterChecked(entry({ progress: 9 }), async () => null), { progress: 10, status: 'reading', totalChapters: null });
+});
+
+test('+1 onto the saved total fails when the catalog cannot be checked', async () => {
+  await assert.rejects(nextChapterChecked(entry({ progress: 9 }), async () => { throw new Error('offline'); }), /could not be checked/);
 });
