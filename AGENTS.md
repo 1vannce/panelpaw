@@ -10,6 +10,7 @@ Run from this directory (the repository root). Use Node 22.13+, 24.3+ or 26+.
 npm ci                          # install exact locked dependencies
 npm start                       # Expo dev server (npm run web / android / ios)
 npm test                        # node --test tests/*.test.js
+npm run lint                    # eslint: unused vars, undefined names, hook rules
 npm run export:web              # app-only web build into dist/ (served at /)
 npm run build:web               # deploy build: landing site at /, app at /app, into dist/
 npm run site:dev                # landing site dev server on :3001 (run `npm --prefix site ci` first)

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { createTrackerApi } from "../api/tracker.js";
 import { getErrorMessage } from "../api/http.js";
 import { isLegacyDemoUrl, normalizeBaseUrl } from "../config.js";

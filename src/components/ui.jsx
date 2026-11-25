@@ -80,7 +80,7 @@ export function Cover({ uri, title, width = 108, height = 156, lifted = false, s
 }
 
 function Stamp({ size, animate }) {
-  const { colors, styles } = useThemed(makeStyles);
+  const { styles } = useThemed(makeStyles);
   const reduce = useReducedMotion();
   const play = animate && !reduce;
   const scale = useSharedValue(play ? 2.4 : 1);
@@ -99,7 +99,7 @@ function Stamp({ size, animate }) {
 
 // Chapter progress. Animates when the value changes, not on first render.
 export function ProgressBar({ value, max }) {
-  const { colors, styles } = useThemed(makeStyles);
+  const { styles } = useThemed(makeStyles);
   const pct = max ? Math.min(100, value / max * 100) : 0;
   const width = useSharedValue(pct);
   useEffect(() => { width.value = withTiming(pct, { duration: 450, easing: Easing.out(Easing.cubic) }); }, [pct, width]);
