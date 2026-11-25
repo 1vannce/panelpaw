@@ -145,6 +145,22 @@ export async function getCatalog(query, format, cursor = { manga: 1, manhwa: 1 }
   return { items, hasNextPage, nextPage: hasNextPage ? next : undefined };
 }
 
+/** Best catalog match for a free-text title, or null. One paced request; used to resolve AI suggestions. */
+export async function findTitle(term, signal) {
+  const query = term.trim();
+  if (!query) return null;
+  const params = new URLSearchParams({ 'filter[text]': query, 'page[limit]': '5', include: 'categories' });
+  const raw = record(await requestJson(CATALOG_BASE_URL + '/manga?' + params, {
+    signal, beforeAttempt: paceCatalog, accept: 'application/vnd.api+json'
+  }), 'Catalog response');
+  if (!Array.isArray(raw.data)) return invalidResponse('Catalog response');
+  const included = Array.isArray(raw.included) ? raw.included : [];
+  const search = normalizedTitle(query);
+  const matches = raw.data.map((item) => normalizeManga(item, included));
+  matches.sort((a, b) => searchRank(a.title, search) - searchRank(b.title, search));
+  return matches[0] ?? null;
+}
+
 export async function getTitle(id, signal) {
   if (!Number.isSafeInteger(id) || id <= 0) throw new ApiError('This title ID is invalid.', { code: 'VALIDATION' });
   const response = record(await requestJson(CATALOG_BASE_URL + '/manga/' + id + '?include=categories', {
