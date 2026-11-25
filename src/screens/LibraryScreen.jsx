@@ -11,7 +11,7 @@ import { useThemed } from "../providers/ThemeProvider.jsx";
 import { useConnection } from "../providers/ConnectionProvider.jsx";
 import { incrementChapter, useEntries, useLists, useTrackerMutations } from "../hooks/useTracker.js";
 import { getErrorMessage } from "../api/http.js";
-import { getTitle } from "../api/catalog.js";
+import { fetchFreshTotal } from "../hooks/useCatalog.js";
 import { READING_STATUSES, STATUS_LABELS, settleProgress } from "../types.js";
 import { SORTS, sortEntries } from "../library.js";
 
@@ -66,8 +66,7 @@ export default function LibraryScreen() {
     if (total !== null && Number(progress) > total) {
       // The series may have grown since it was saved: check the catalog before refusing.
       try {
-        const manga = await queryClient.fetchQuery({ queryKey: ['title', 'kitsu', editing.mangaId], queryFn: ({ signal }) => getTitle(editing.mangaId, signal), staleTime: 30 * 60 * 1000 });
-        freshTotal = manga.chapters || null;
+        freshTotal = await fetchFreshTotal(queryClient, editing.mangaId);
       } catch {
         setModalError('This title has ' + total + ' saved chapters, and the catalog could not be checked for more. Try again in a moment.');return;
       }
