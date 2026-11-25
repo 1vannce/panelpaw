@@ -64,3 +64,39 @@ export function parseRecommendations(text) {
   if (titles.length < MIN_RESULTS) throw badResponse('Too few usable titles.');
   return titles.slice(0, MAX_RESULTS);
 }
+
+const MAX_LOG_TEXT = 200;
+
+/** Removes anything shaped like a Google API key, plus the literal secret value when one is given. */
+export function redact(text, secret) {
+  let clean = String(text).replace(/AIza[\w-]+/g, '[redacted]');
+  if (typeof secret === 'string' && secret.length >= 8) clean = clean.split(secret).join('[redacted]');
+  return clean;
+}
+
+/** Log-safe value: redacted, cut to about 200 characters, JSON-quoted so it cannot span lines. */
+export function quote(text, secret) {
+  const clean = redact(text, secret);
+  return JSON.stringify(clean.length > MAX_LOG_TEXT ? clean.slice(0, MAX_LOG_TEXT) + '...' : clean);
+}
+
+/**
+ * One log-safe line describing a non-OK Gemini response: HTTP status plus Google's error status, code and message,
+ * or the raw body when it is not a Google error. Text is redacted and bounded to about 200 characters, and quoted
+ * so it stays on one row. Google's own message can still echo fragments of the request, which the bound limits.
+ * The prompt and library are never passed in.
+ */
+export function describeUpstreamError(httpStatus, bodyText, secret) {
+  const head = 'http=' + httpStatus;
+  if (typeof bodyText !== 'string' || !bodyText.trim()) return head + ' body=empty';
+  let error;
+  try { error = JSON.parse(bodyText)?.error; } catch { /* not JSON: log the raw body below */ }
+  if (error && typeof error === 'object') {
+    const parts = [];
+    if (typeof error.status === 'string') parts.push('google_status=' + quote(error.status.slice(0, 40), secret));
+    if (typeof error.code === 'number') parts.push('google_code=' + error.code);
+    if (typeof error.message === 'string') parts.push('message=' + quote(error.message, secret));
+    if (parts.length > 0) return head + ' ' + parts.join(' ');
+  }
+  return head + ' body=' + quote(bodyText.trim(), secret);
+}

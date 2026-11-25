@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildPrompt, MODEL, parseRecommendations, sanitizeLibrary } from '../api/_lib.js';
+import { buildPrompt, describeUpstreamError, MODEL, parseRecommendations, quote, redact, sanitizeLibrary } from '../api/_lib.js';
 
 const five = ['Vagabond', 'Monster', 'Berserk', 'Vinland Saga', 'Pluto'];
 
@@ -100,4 +100,70 @@ test('buildPrompt includes titles and statuses but nothing else', () => {
   assert.match(prompt, /Berserk/);
   assert.match(prompt, /reading/);
   assert.doesNotMatch(prompt, /https?:\/\//);
+});
+
+test('describeUpstreamError reads Google error JSON', () => {
+  const body = JSON.stringify({ error: { code: 400, message: 'Invalid JSON payload received.', status: 'INVALID_ARGUMENT' } });
+  assert.equal(describeUpstreamError(400, body), 'http=400 google_status="INVALID_ARGUMENT" google_code=400 message="Invalid JSON payload received."');
+});
+
+test('describeUpstreamError copes with a non-JSON body', () => {
+  assert.equal(describeUpstreamError(502, '<html>Bad gateway</html>'), 'http=502 body="<html>Bad gateway</html>"');
+});
+
+test('describeUpstreamError copes with an empty or missing body', () => {
+  assert.equal(describeUpstreamError(500, ''), 'http=500 body=empty');
+  assert.equal(describeUpstreamError(500, undefined), 'http=500 body=empty');
+  assert.equal(describeUpstreamError(500, null), 'http=500 body=empty');
+});
+
+test('describeUpstreamError copes with JSON that is not a Google error', () => {
+  assert.equal(describeUpstreamError(403, '{"hello":1}'), 'http=403 body="{\\"hello\\":1}"');
+  assert.equal(describeUpstreamError(403, '[1,2]'), 'http=403 body="[1,2]"');
+});
+
+test('describeUpstreamError redacts key-like strings in message and raw body', () => {
+  const key = 'AIzaSy' + 'A'.repeat(33);
+  const json = JSON.stringify({ error: { code: 400, status: 'INVALID_ARGUMENT', message: 'API key not valid: ' + key } });
+  assert.doesNotMatch(describeUpstreamError(400, json), /AIza/);
+  assert.match(describeUpstreamError(400, json), /\[redacted\]/);
+  assert.doesNotMatch(describeUpstreamError(400, 'oops ' + key), /AIza/);
+});
+
+test('describeUpstreamError truncates long messages to about 200 characters', () => {
+  const json = JSON.stringify({ error: { code: 400, status: 'INVALID_ARGUMENT', message: 'x'.repeat(500) } });
+  const line = describeUpstreamError(400, json);
+  assert.ok(line.length < 300);
+  assert.match(line, /x{200}\.\.\."/);
+  assert.doesNotMatch(line, /x{201}/);
+});
+
+test('describeUpstreamError tolerates odd field types', () => {
+  const json = JSON.stringify({ error: { code: 'weird', status: { a: 1 }, message: 42 } });
+  assert.equal(describeUpstreamError(400, json), 'http=400 body="' + json.replace(/"/g, '\\"') + '"');
+});
+
+test('redact removes AIza-style keys and leaves other text', () => {
+  assert.equal(redact('key=AIzaSyB-abc_123 failed'), 'key=[redacted] failed');
+  assert.equal(redact('nothing here'), 'nothing here');
+});
+
+test('describeUpstreamError quotes google_status so a newline cannot split the line', () => {
+  const json = JSON.stringify({ error: { code: 400, status: 'A\nB', message: 'm' } });
+  const line = describeUpstreamError(400, json);
+  assert.ok(!line.includes('\n'));
+  assert.match(line, /google_status="A\\nB"/);
+});
+
+test('describeUpstreamError and redact also remove a literal secret value', () => {
+  const secret = 'some-other-format-key-9876';
+  assert.equal(redact('x ' + secret + ' y', secret), 'x [redacted] y');
+  const json = JSON.stringify({ error: { code: 400, status: 'INVALID_ARGUMENT', message: 'bad ' + secret } });
+  assert.doesNotMatch(describeUpstreamError(400, json, secret), /some-other-format/);
+  assert.doesNotMatch(describeUpstreamError(400, 'raw ' + secret, secret), /some-other-format/);
+});
+
+test('quote returns a one-line, redacted, truncated JSON string', () => {
+  assert.equal(quote('a\nb AIzaSyB-abc'), '"a\\nb [redacted]"');
+  assert.ok(quote('x'.repeat(500)).length <= 206);
 });
