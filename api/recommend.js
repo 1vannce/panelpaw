@@ -1,7 +1,7 @@
 // Vercel serverless function: POST /api/recommend
 // Body: { library: [{ title, status, format }] }  ->  { titles: string[] }
 // The Gemini key stays in the GEMINI_API_KEY env var and never reaches the client bundle.
-import { buildPrompt, describeUpstreamError, MODEL, parseRecommendations, redact, sanitizeLibrary } from './_lib.js';
+import { buildPrompt, describeUpstreamError, MODEL, parseRecommendations, quote, sanitizeLibrary } from './_lib.js';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/' + MODEL + ':generateContent';
 const TIMEOUT_MS = 9000;
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => '');
-      log('upstream_error model=' + MODEL + ' ' + describeUpstreamError(response.status, detail));
+      log('upstream_error model=' + MODEL + ' ' + describeUpstreamError(response.status, detail, key));
       return response.status === 429 ? fail(res, 429, 'RATE_LIMITED') : fail(res, 502, 'UPSTREAM_ERROR');
     }
     const data = await response.json();
@@ -60,10 +60,10 @@ export default async function handler(req, res) {
       return fail(res, 504, 'TIMEOUT');
     }
     if (error?.code === 'BAD_RESPONSE') {
-      log('bad_response ' + redact(error.message).slice(0, 200));
+      log('bad_response ' + quote(error.message, key));
       return fail(res, 502, 'BAD_RESPONSE');
     }
-    log('unexpected ' + (error?.name ?? 'Error') + ': ' + redact(error?.message ?? '').slice(0, 200));
+    log('unexpected name=' + quote(error?.name ?? 'Error', key) + ' message=' + quote(error?.message ?? '', key));
     return fail(res, 502, 'UPSTREAM_ERROR');
   }
 }

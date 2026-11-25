@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildPrompt, describeUpstreamError, MODEL, parseRecommendations, redact, sanitizeLibrary } from '../api/_lib.js';
+import { buildPrompt, describeUpstreamError, MODEL, parseRecommendations, quote, redact, sanitizeLibrary } from '../api/_lib.js';
 
 const five = ['Vagabond', 'Monster', 'Berserk', 'Vinland Saga', 'Pluto'];
 
@@ -104,7 +104,7 @@ test('buildPrompt includes titles and statuses but nothing else', () => {
 
 test('describeUpstreamError reads Google error JSON', () => {
   const body = JSON.stringify({ error: { code: 400, message: 'Invalid JSON payload received.', status: 'INVALID_ARGUMENT' } });
-  assert.equal(describeUpstreamError(400, body), 'http=400 google_status=INVALID_ARGUMENT google_code=400 message="Invalid JSON payload received."');
+  assert.equal(describeUpstreamError(400, body), 'http=400 google_status="INVALID_ARGUMENT" google_code=400 message="Invalid JSON payload received."');
 });
 
 test('describeUpstreamError copes with a non-JSON body', () => {
@@ -146,4 +146,24 @@ test('describeUpstreamError tolerates odd field types', () => {
 test('redact removes AIza-style keys and leaves other text', () => {
   assert.equal(redact('key=AIzaSyB-abc_123 failed'), 'key=[redacted] failed');
   assert.equal(redact('nothing here'), 'nothing here');
+});
+
+test('describeUpstreamError quotes google_status so a newline cannot split the line', () => {
+  const json = JSON.stringify({ error: { code: 400, status: 'A\nB', message: 'm' } });
+  const line = describeUpstreamError(400, json);
+  assert.ok(!line.includes('\n'));
+  assert.match(line, /google_status="A\\nB"/);
+});
+
+test('describeUpstreamError and redact also remove a literal secret value', () => {
+  const secret = 'some-other-format-key-9876';
+  assert.equal(redact('x ' + secret + ' y', secret), 'x [redacted] y');
+  const json = JSON.stringify({ error: { code: 400, status: 'INVALID_ARGUMENT', message: 'bad ' + secret } });
+  assert.doesNotMatch(describeUpstreamError(400, json, secret), /some-other-format/);
+  assert.doesNotMatch(describeUpstreamError(400, 'raw ' + secret, secret), /some-other-format/);
+});
+
+test('quote returns a one-line, redacted, truncated JSON string', () => {
+  assert.equal(quote('a\nb AIzaSyB-abc'), '"a\\nb [redacted]"');
+  assert.ok(quote('x'.repeat(500)).length <= 206);
 });
