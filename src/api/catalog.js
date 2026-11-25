@@ -157,8 +157,10 @@ export async function findTitle(term, signal) {
   const included = Array.isArray(raw.included) ? raw.included : [];
   const search = normalizedTitle(query);
   const matches = raw.data.map((item) => normalizeManga(item, included));
-  matches.sort((a, b) => searchRank(a.title, search) - searchRank(b.title, search));
-  return matches[0] ?? null;
+  const rank = (m) => Math.min(searchRank(m.title, search), searchRank(m.originalTitle, search));
+  matches.sort((a, b) => rank(a) - rank(b));
+  // No title contains the query: the model probably invented it, so do not show an unrelated result.
+  return matches[0] && rank(matches[0]) < 3 ? matches[0] : null;
 }
 
 export async function getTitle(id, signal) {

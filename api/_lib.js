@@ -22,7 +22,7 @@ export function sanitizeLibrary(value) {
   for (const item of value) {
     if (clean.length >= MAX_ENTRIES) break;
     if (!item || typeof item !== 'object' || typeof item.title !== 'string' || !STATUSES.includes(item.status)) continue;
-    const title = item.title.trim().slice(0, MAX_TITLE);
+    const title = item.title.replace(/\s+/g, ' ').trim().slice(0, MAX_TITLE);
     if (!title) continue;
     const format = typeof item.format === 'string' ? item.format.trim().slice(0, 20) : '';
     clean.push({ title, status: item.status, format });

@@ -22,8 +22,9 @@ export default function RecommendPanel() {
   return <View style={styles.wrap}>
     <View style={styles.head}>
       <Tag label="WHAT TO READ NEXT" />
-      {result && result.items.length > 0 && <Text style={styles.meta}>{ai ? 'Picked for you by AI' : 'Similar titles by genre'}</Text>}
+      {result && result.items.length > 0 && <Text style={styles.meta}>{ai ? 'Picked for you by AI' : result.source === 'genre' ? 'Similar titles by genre' : 'Popular titles'}</Text>}
     </View>
+    {result?.aiFailed && result.items.length > 0 && <Text style={styles.meta}>AI picks are unavailable right now, so these come from the catalog.</Text>}
     {!result && !picks.isPending && !picks.isError && <Text style={styles.meta}>Get five suggestions based on what you have saved.</Text>}
     {picks.isPending && <View accessibilityLabel="Finding your next read" accessibilityLiveRegion="polite" style={styles.row}>
       {[0, 1, 2, 3].map((i) => <SkeletonCover key={i} width={92} height={131} />)}
