@@ -64,3 +64,35 @@ export function parseRecommendations(text) {
   if (titles.length < MIN_RESULTS) throw badResponse('Too few usable titles.');
   return titles.slice(0, MAX_RESULTS);
 }
+
+const MAX_LOG_TEXT = 200;
+
+/** Removes anything shaped like a Google API key. Defensive: the key is never logged on purpose. */
+export function redact(text) {
+  return String(text).replace(/AIza[\w-]+/g, '[redacted]');
+}
+
+function clip(text) {
+  const clean = redact(text);
+  return clean.length > MAX_LOG_TEXT ? clean.slice(0, MAX_LOG_TEXT) + '...' : clean;
+}
+
+/**
+ * One log-safe line describing a non-OK Gemini response: HTTP status plus Google's error status, code and message
+ * (message cut to about 200 characters), or the raw body cut the same way when it is not a Google error.
+ * Never includes request data. Values are JSON-quoted so the line stays on one row.
+ */
+export function describeUpstreamError(httpStatus, bodyText) {
+  const head = 'http=' + httpStatus;
+  if (typeof bodyText !== 'string' || !bodyText.trim()) return head + ' body=empty';
+  let error;
+  try { error = JSON.parse(bodyText)?.error; } catch { /* not JSON: log the raw body below */ }
+  if (error && typeof error === 'object') {
+    const parts = [];
+    if (typeof error.status === 'string') parts.push('google_status=' + redact(error.status).slice(0, 40));
+    if (typeof error.code === 'number') parts.push('google_code=' + error.code);
+    if (typeof error.message === 'string') parts.push('message=' + JSON.stringify(clip(error.message)));
+    if (parts.length > 0) return head + ' ' + parts.join(' ');
+  }
+  return head + ' body=' + JSON.stringify(clip(bodyText.trim()));
+}
