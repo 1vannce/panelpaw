@@ -54,3 +54,9 @@ test('+1 onto a total the catalog no longer knows keeps reading', async () => {
 test('+1 onto the saved total fails when the catalog cannot be checked', async () => {
   await assert.rejects(nextChapterChecked(entry({ progress: 9 }), async () => { throw new Error('offline'); }), /could not be checked/);
 });
+
+test('+1 never lowers saved progress when the catalog total has dropped below it', async () => {
+  await assert.rejects(nextChapterChecked(entry({ progress: 9 }), async () => 8), /8 chapters.*9/);
+  // A total equal to the saved progress is fine: the title is simply finished.
+  assert.deepEqual(await nextChapterChecked(entry({ progress: 9 }), async () => 9), { progress: 9, status: 'completed', totalChapters: 9 });
+});

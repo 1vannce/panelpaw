@@ -15,10 +15,16 @@ export function useCatalog(query, format, genre = '') {
   });
 }
 
+const titleQuery = (id) => ({ queryKey: ['title', 'kitsu', id], queryFn: ({ signal }) => getTitle(id, signal) });
+
+/** Chapter total straight from the catalog (null when unknown); staleTime 0 skips the cached title. */
+export async function fetchFreshTotal(queryClient, id) {
+  return (await queryClient.fetchQuery({ ...titleQuery(id), staleTime: 0 })).chapters || null;
+}
+
 export function useTitle(id) {
   return useQuery({
-    queryKey: ['title', 'kitsu', id],
-    queryFn: ({ signal }) => getTitle(id, signal),
+    ...titleQuery(id),
     staleTime: 30 * 60 * 1000,
     retry: false,
     refetchOnWindowFocus: false

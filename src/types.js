@@ -31,5 +31,9 @@ export async function nextChapterChecked(entry, fetchTotal) {
   try {total = await fetchTotal();} catch {
     throw new Error('This title has ' + entry.totalChapters + ' saved chapters, and the catalog could not be checked for more. Try again in a moment.');
   }
+  // Never let a lower catalog total drag saved progress down; ask for a manual fix instead.
+  if (total !== null && total < entry.progress) {
+    throw new Error('The catalog now lists ' + total + ' chapters, fewer than your saved progress of ' + entry.progress + '. Edit the entry to fix it.');
+  }
   return { ...nextChapter({ ...entry, totalChapters: total }), totalChapters: total };
 }
