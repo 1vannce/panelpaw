@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Button, Chip, Cover, EmptyArt, IconButton, Masthead, Notice, ProgressBar, ScreenEnter, SkeletonCover, Tag, ThemeToggle } from '../components/ui.jsx';
+import RecommendPanel from '../components/RecommendPanel.jsx';
 import { useCatalog } from '../hooks/useCatalog.js';
 import { incrementChapter, useEntries, useTrackerMutations } from '../hooks/useTracker.js';
 import { useConnection } from '../providers/ConnectionProvider.jsx';
@@ -210,6 +211,7 @@ export default function HomeScreen() {
               </Pressable>
             </View>}
             {!hasFilters && <ContinueRail />}
+            {!hasFilters && <RecommendPanel />}
             {featured && <FeaturedTitle manga={featured} />}
             <View style={styles.catalogHeading}>
               <View style={{ flex: 1, gap: 5 }}>
